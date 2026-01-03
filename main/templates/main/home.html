@@ -1,0 +1,164 @@
+{% extends 'main/base.html' %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4 mt-2">
+    <a href="?mes={{ mes_ant }}&ano={{ ano_ant }}" class="btn btn-outline-secondary rounded-circle" style="width: 40px; height: 40px; display:flex; align-items:center; justify-content:center;">
+        ❮
+    </a>
+
+    <div class="text-center">
+        <h4 class="mb-0 text-capitalize fw-bold">{{ data_exibicao|date:"F Y" }}</h4>
+        
+        <small class="{% if saldo >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+            Saldo: R$ {{ saldo|floatformat:2 }}
+        </small>
+    </div>
+
+    <a href="?mes={{ mes_prox }}&ano={{ ano_prox }}" class="btn btn-outline-secondary rounded-circle" style="width: 40px; height: 40px; display:flex; align-items:center; justify-content:center;">
+        ❯
+    </a>
+</div>
+
+<div class="row mb-4 text-center">
+    <div class="col-6">
+        <div class="card shadow-sm text-white bg-success">
+            <div class="card-body p-2">
+                <small>Entradas</small>
+                <h5 class="mb-0">R$ {{ total_receitas|floatformat:2|default:"0,00" }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-6">
+        <div class="card shadow-sm text-white bg-danger">
+            <div class="card-body p-2">
+                <small>Saídas</small>
+                <h5 class="mb-0">R$ {{ total_despesas|floatformat:2|default:"0,00" }}</h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h6 class="card-title text-muted">Gastos por Categoria</h6>
+        <div style="position: relative; height: 250px;">
+            <canvas id="meuGrafico"></canvas>
+        </div>
+    </div>
+</div>
+
+<h6 class="text-muted ps-1">Últimas Transações</h6>
+<div class="list-group mb-5 pb-5"> 
+    {% for t in transacoes %}
+    <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+        
+        <div class="d-flex align-items-center">
+            <div style="width: 10px; height: 10px; border-radius: 50%; background-color: {{ t.categoria.cor|default:'#ccc' }}; margin-right: 10px;"></div>
+            
+            <div>
+                <strong>{{ t.categoria.nome|default:"Geral" }}</strong>
+                <br>
+                <small class="text-muted" style="font-size: 0.85rem;">
+                    {{ t.data|date:"d/m" }} • {{ t.descricao|truncatechars:20 }}
+                </small>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center">
+            <span class="fw-bold me-3 {% if t.tipo == 'D' %}text-danger{% else %}text-success{% endif %}">
+                R$ {{ t.valor }}
+            </span>
+            
+            <a href="{% url 'excluir_transacao' t.id %}" 
+               class="text-secondary"
+               style="text-decoration: none; font-size: 1.2rem;"
+               onclick="return confirm('Apagar esta transação?');">
+                &times; </a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center mt-4 text-muted">
+        <p>Nenhuma transação registada.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<script>
+    // Registra o plugin
+    Chart.register(ChartDataLabels);
+
+    const ctx = document.getElementById('meuGrafico').getContext('2d');
+    
+    const labels = {{ labels_grafico|safe }};
+    const data = {{ data_grafico|safe }};
+    const cores = {{ cores_grafico|safe }};
+
+    // Função para formatar dinheiro (R$)
+    const formatarMoeda = (valor) => {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        }).format(valor);
+    };
+
+    if (labels.length > 0) {
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: cores,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 12, padding: 15 }
+                    },
+                    
+                    // CONFIGURAÇÃO DO TOOLTIP (O QUE APARECE AO TOCAR)
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let value = context.raw;
+                                let total = context.chart._metasets[context.datasetIndex].total;
+                                let percentage = ((value / total) * 100).toFixed(1) + '%';
+                                
+                                // Aqui aplicamos a formatação de moeda
+                                return context.label + ': ' + formatarMoeda(value) + ' (' + percentage + ')';
+                            }
+                        }
+                    },
+
+                    // CONFIGURAÇÃO DOS RÓTULOS (TEXTO BRANCO NO GRÁFICO)
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 12 },
+                        formatter: (value, ctx) => {
+                            let sum = 0;
+                            let dataArr = ctx.chart.data.datasets[0].data;
+                            dataArr.map(data => { sum += data; });
+                            let percentage = (value * 100 / sum).toFixed(1) + "%";
+                            return percentage;
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        document.getElementById('meuGrafico').parentElement.innerHTML = 
+            '<div class="text-center mt-5 text-muted"><p>Adicione gastos para ver o gráfico!</p></div>';
+    }
+</script>
+
+{% endblock %}

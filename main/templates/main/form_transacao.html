@@ -1,0 +1,57 @@
+{% extends 'main/base.html' %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        
+        <h4 class="mb-4 mt-2">Nova Movimentação</h4>
+
+        <form method="post">
+            {% csrf_token %}
+
+            {% if form.errors %}
+                <div class="alert alert-danger">Verifique os campos abaixo.</div>
+            {% endif %}
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Tipo</label>
+                {{ form.tipo }}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Valor (R$)</label>
+                {{ form.valor }}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Data</label>
+                {{ form.data }}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Categoria</label>
+                <div class="input-group">
+                    {{ form.categoria }}
+                    
+                    <a href="{% url 'gerenciar_categorias' %}" class="btn btn-outline-primary">
+                        + Criar
+                    </a>
+                </div>
+                <small class="text-muted">Selecione ou crie uma nova.</small>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Descrição</label>
+                {{ form.descricao }}
+            </div>
+
+            <button type="submit" class="btn btn-success w-100 btn-lg mb-5 shadow-sm">
+                Salvar Transação
+            </button>
+            
+        </form>
+    </div>
+</div>
+
+{% endblock %}
