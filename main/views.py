@@ -121,15 +121,3 @@ def excluir_transacao(request, id):
     transacao = get_object_or_404(Transacao, id=id, usuario=request.user)
     transacao.delete()
     return redirect('home')
-
-# Função de Registo (Não precisa de login_required)
-def registro(request):
-    if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user) # Faz login automático
-            return redirect('home')
-    else:
-        form = UserCreationForm()
-    return render(request, 'registration/registro.html', {'form': form})
