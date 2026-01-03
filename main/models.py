@@ -9,7 +9,7 @@ class Categoria(models.Model):
     criada_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"self.nome ({self.usuario.username})"
+        return f"{self.nome} ({self.usuario.username})"
 
 class Transacao(models.Model):
     TIPO_CHOICES = (
