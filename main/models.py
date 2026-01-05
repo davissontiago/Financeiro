@@ -16,6 +16,10 @@ class Transacao(models.Model):
         ('D', 'Despesa'),
         ('R', 'Receita'),
     )
+    METODO_CHOICES = (
+        ('V', 'Pix / Débito'),
+        ('C', 'Cartão de Crédito'),
+    )
     
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
 
@@ -23,6 +27,8 @@ class Transacao(models.Model):
     valor = models.DecimalField(max_digits=10, decimal_places=2)
     data = models.DateField(default=timezone.now)
     tipo = models.CharField(max_length=1, choices=TIPO_CHOICES, default='D')
+    
+    metodo = models.CharField(max_length=1, choices=METODO_CHOICES, default='V', verbose_name="Método")
     
     categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, null=True, blank=True)
     

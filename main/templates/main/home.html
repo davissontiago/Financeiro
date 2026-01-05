@@ -39,21 +39,51 @@
     </div>
 </div>
 
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <h6 class="card-title text-muted">Gastos por Categoria</h6>
-        <div style="position: relative; height: 250px;">
-            <canvas id="meuGrafico"></canvas>
-        </div>
+<div id="carouselGraficos" class="carousel slide mb-5" data-bs-touch="true" data-bs-interval="false">
+    
+    <div class="carousel-indicators" style="bottom: -40px;">
+        <button type="button" data-bs-target="#carouselGraficos" data-bs-slide-to="0" class="active bg-dark"></button>
+        <button type="button" data-bs-target="#carouselGraficos" data-bs-slide-to="1" class="bg-dark"></button>
     </div>
+
+    <div class="carousel-inner">
+        
+        <div class="carousel-item active">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="card-title text-center text-muted mb-3">💸 Gastos à Vista / Débito</h6>
+                    <div style="position: relative; height: 250px;">
+                        <canvas id="graficoAvista"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="carousel-item">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="card-title text-center text-muted mb-3">💳 Fatura Cartão de Crédito</h6>
+                    <div style="position: relative; height: 250px;">
+                        <canvas id="graficoCredito"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <button class="carousel-control-prev" type="button" data-bs-target="#carouselGraficos" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon bg-dark rounded-circle p-2" aria-hidden="true"></span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#carouselGraficos" data-bs-slide="next">
+        <span class="carousel-control-next-icon bg-dark rounded-circle p-2" aria-hidden="true"></span>
+    </button>
 </div>
 
 <h6 class="text-muted ps-1">Últimas Transações</h6>
 <div class="list-group mb-5 pb-5"> 
     {% for t in transacoes %}
-    <div class="list-group-item d-flex justify-content-between align-items-center p-3">
-        
-        <div class="d-flex align-items-center">
+    <div class="d-flex align-items-center">
             <div style="width: 10px; height: 10px; border-radius: 50%; background-color: {{ t.categoria.cor|default:'#ccc' }}; margin-right: 10px;"></div>
             
             <div>
@@ -62,21 +92,27 @@
                 <small class="text-muted" style="font-size: 0.85rem;">
                     {{ t.data|date:"d/m" }} • {{ t.descricao|truncatechars:20 }}
                 </small>
+                
+                <div class="mt-1">
+                    {% if t.tipo == 'R' %}
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success" style="font-size: 0.65rem;">
+                            Entrada
+                        </span>
+                    {% else %}
+                        {% if t.metodo == 'C' %}
+                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning" style="font-size: 0.65rem;">
+                                💳 Crédito
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary" style="font-size: 0.65rem;">
+                                💵 À Vista
+                            </span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
             </div>
         </div>
-
-        <div class="d-flex align-items-center">
-            <span class="fw-bold me-3 {% if t.tipo == 'D' %}text-danger{% else %}text-success{% endif %}">
-                R$ {{ t.valor }}
-            </span>
-            
-            <a href="{% url 'excluir_transacao' t.id %}" 
-               class="text-secondary"
-               style="text-decoration: none; font-size: 1.2rem;"
-               onclick="return confirm('Apagar esta transação?');">
-                &times; </a>
-        </div>
-    </div>
     {% empty %}
     <div class="text-center mt-4 text-muted">
         <p>Nenhuma transação registada.</p>
@@ -85,80 +121,81 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 
 <script>
-    // Registra o plugin
     Chart.register(ChartDataLabels);
 
-    const ctx = document.getElementById('meuGrafico').getContext('2d');
-    
-    const labels = {{ labels_grafico|safe }};
-    const data = {{ data_grafico|safe }};
-    const cores = {{ cores_grafico|safe }};
+    // Função genérica para criar gráficos (evita repetir código)
+    function criarGrafico(canvasId, labels, data, cores, msgVazia) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        
+        // Formatar Moeda
+        const formatarMoeda = (valor) => {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+        };
 
-    // Função para formatar dinheiro (R$)
-    const formatarMoeda = (valor) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-        }).format(valor);
-    };
-
-    if (labels.length > 0) {
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: data,
-                    backgroundColor: cores,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { boxWidth: 12, padding: 15 }
-                    },
-                    
-                    // CONFIGURAÇÃO DO TOOLTIP (O QUE APARECE AO TOCAR)
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let value = context.raw;
-                                let total = context.chart._metasets[context.datasetIndex].total;
-                                let percentage = ((value / total) * 100).toFixed(1) + '%';
-                                
-                                // Aqui aplicamos a formatação de moeda
-                                return context.label + ': ' + formatarMoeda(value) + ' (' + percentage + ')';
+        if (labels.length > 0) {
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: cores,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let value = context.raw;
+                                    let total = context.chart._metasets[context.datasetIndex].total;
+                                    let percentage = ((value / total) * 100).toFixed(1) + '%';
+                                    return context.label + ': ' + formatarMoeda(value) + ' (' + percentage + ')';
+                                }
                             }
-                        }
-                    },
-
-                    // CONFIGURAÇÃO DOS RÓTULOS (TEXTO BRANCO NO GRÁFICO)
-                    datalabels: {
-                        color: '#fff',
-                        font: { weight: 'bold', size: 12 },
-                        formatter: (value, ctx) => {
-                            let sum = 0;
-                            let dataArr = ctx.chart.data.datasets[0].data;
-                            dataArr.map(data => { sum += data; });
-                            let percentage = (value * 100 / sum).toFixed(1) + "%";
-                            return percentage;
+                        },
+                        datalabels: {
+                            color: '#fff',
+                            font: { weight: 'bold', size: 12 },
+                            formatter: (value, ctx) => {
+                                let sum = 0;
+                                ctx.chart.data.datasets[0].data.map(d => sum += d);
+                                return (value * 100 / sum).toFixed(1) + "%";
+                            }
                         }
                     }
                 }
-            }
-        });
-    } else {
-        document.getElementById('meuGrafico').parentElement.innerHTML = 
-            '<div class="text-center mt-5 text-muted"><p>Adicione gastos para ver o gráfico!</p></div>';
+            });
+        } else {
+            document.getElementById(canvasId).parentElement.innerHTML = 
+                '<div class="text-center mt-5 text-muted"><p>' + msgVazia + '</p></div>';
+        }
     }
+
+    // Renderizar Gráfico À VISTA
+    criarGrafico(
+        'graficoAvista', 
+        {{ labels_avista|safe }}, 
+        {{ data_avista|safe }}, 
+        {{ cores_avista|safe }},
+        "Nenhum gasto à vista neste mês."
+    );
+
+    // Renderizar Gráfico CRÉDITO
+    criarGrafico(
+        'graficoCredito', 
+        {{ labels_credito|safe }}, 
+        {{ data_credito|safe }}, 
+        {{ cores_credito|safe }},
+        "Nenhum gasto no crédito neste mês."
+    );
 </script>
 
 {% endblock %}

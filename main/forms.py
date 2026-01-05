@@ -4,10 +4,14 @@ from .models import Transacao, Categoria
 class TransacaoForm(forms.ModelForm):
     class Meta:
         model = Transacao
-        fields = ['tipo', 'valor', 'data', 'categoria', 'descricao']
+        fields = ['tipo', 'valor', 'data', 'metodo', 'categoria', 'descricao']
         widgets = {
-            'data': forms.DateInput(attrs={'type': 'date'}), 
-            'valor': forms.NumberInput(attrs={'step': '0.01'}),
+            'data': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'valor': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control', 'placeholder': '0.00'}),
+            'tipo': forms.Select(attrs={'class': 'form-select'}),
+            'metodo': forms.Select(attrs={'class': 'form-select'}),
+            'categoria': forms.Select(attrs={'class': 'form-select'}),
+            'descricao': forms.TextInput(attrs={'class': 'form-control'}),
         }
     def __init__(self, user, *args, **kwargs):
         super(TransacaoForm, self).__init__(*args, **kwargs)

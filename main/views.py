@@ -1,8 +1,6 @@
 import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth import login
 from django.db.models import Sum
 from django.utils import timezone
 from .models import Transacao, Categoria
@@ -12,12 +10,10 @@ from .forms import TransacaoForm, CategoriaForm
 def home(request):
     # 1. Descobrir qual mês/ano mostrar
     hoje = timezone.now()
-    
-    # Tenta pegar da URL (ex: ?mes=2&ano=2024), se não tiver, usa o atual
     mes_atual = int(request.GET.get('mes', hoje.month))
     ano_atual = int(request.GET.get('ano', hoje.year))
 
-    # Lista manual para garantir meses em Português e Capitalizados
+    # Lista manual para garantir meses em Português
     lista_meses = {
         1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
         5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
@@ -25,38 +21,48 @@ def home(request):
     }
     nome_mes_exibicao = lista_meses[mes_atual]
 
-    # 2. Filtrar as transações DO MÊS ESPECÍFICO E DO UTILIZADOR
+    # 2. Filtro Principal: Transações do USUÁRIO e do MÊS específico
     transacoes = Transacao.objects.filter(
-        usuario=request.user,  # <--- Filtro de segurança
+        usuario=request.user,
         data__month=mes_atual, 
         data__year=ano_atual
-    ).order_by('-data') # Mais recentes primeiro
+    ).order_by('-data')
 
-    # 3. Calcular Totais (Baseado SOMENTE no filtro acima)
+    # 3. Calcular Totais Gerais
     total_receitas = transacoes.filter(tipo='R').aggregate(Sum('valor'))['valor__sum'] or 0
     total_despesas = transacoes.filter(tipo='D').aggregate(Sum('valor'))['valor__sum'] or 0
+    despesas_avista = transacoes.filter(tipo='D', metodo='V').aggregate(Sum('valor'))['valor__sum'] or 0
+    saldo = total_receitas - despesas_avista
     saldo = total_receitas - total_despesas
 
-    # 4. Dados para o Gráfico (Baseado SOMENTE no filtro acima)
-    gastos_por_categoria = transacoes.filter(tipo='D').values('categoria__nome', 'categoria__cor').annotate(total=Sum('valor'))
-    
-    labels = []
-    data_grafico = []
-    cores = []
+    # 4. Preparação dos Dados para os Gráficos (Função Auxiliar Interna)
+    def preparar_dados_grafico(queryset_filtrado):
+        # Agrupa por Categoria e soma os valores
+        dados_agrupados = queryset_filtrado.values('categoria__nome', 'categoria__cor').annotate(total=Sum('valor'))
+        
+        labels, data, cores = [], [], []
+        for item in dados_agrupados:
+            labels.append(item['categoria__nome'] if item['categoria__nome'] else 'Outros')
+            data.append(float(item['total']))
+            cores.append(item['categoria__cor'] if item['categoria__cor'] else '#CCCCCC')
+        return labels, data, cores
 
-    for item in gastos_por_categoria:
-        labels.append(item['categoria__nome'] if item['categoria__nome'] else 'Outros')
-        data_grafico.append(float(item['total']))
-        cores.append(item['categoria__cor'] if item['categoria__cor'] else '#CCCCCC')
+    # --- Gráfico 1: À Vista / Débito ---
+    # Filtra apenas despesas (tipo='D') que são à vista (metodo='V')
+    gastos_avista = transacoes.filter(tipo='D', metodo='V')
+    labels_v, data_v, cores_v = preparar_dados_grafico(gastos_avista)
+
+    # --- Gráfico 2: Cartão de Crédito ---
+    # Filtra apenas despesas (tipo='D') que são crédito (metodo='C')
+    gastos_credito = transacoes.filter(tipo='D', metodo='C')
+    labels_c, data_c, cores_c = preparar_dados_grafico(gastos_credito)
 
     # 5. Lógica de Navegação (Mês Anterior / Próximo)
-    # Anterior
     if mes_atual == 1:
         mes_ant, ano_ant = 12, ano_atual - 1
     else:
         mes_ant, ano_ant = mes_atual - 1, ano_atual
 
-    # Próximo
     if mes_atual == 12:
         mes_prox, ano_prox = 1, ano_atual + 1
     else:
@@ -67,16 +73,24 @@ def home(request):
         'total_receitas': total_receitas,
         'total_despesas': total_despesas,
         'saldo': saldo,
-        'labels_grafico': labels,
-        'data_grafico': data_grafico,
-        'cores_grafico': cores,
         
-        # Variáveis de Navegação
-        'nome_mes_exibicao': nome_mes_exibicao, # Nome bonito
+        # Dados para o Gráfico À Vista
+        'labels_avista': labels_v,
+        'data_avista': data_v,
+        'cores_avista': cores_v,
+
+        # Dados para o Gráfico Crédito
+        'labels_credito': labels_c,
+        'data_credito': data_c,
+        'cores_credito': cores_c,
+        
+        # Variáveis de Navegação e Título
+        'nome_mes_exibicao': nome_mes_exibicao,
         'ano_atual': ano_atual,
         'mes_ant': mes_ant, 'ano_ant': ano_ant,
         'mes_prox': mes_prox, 'ano_prox': ano_prox,
     }
+    
     return render(request, 'main/home.html', context)
 
 @login_required
