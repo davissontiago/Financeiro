@@ -83,7 +83,9 @@
 <h6 class="text-muted ps-1">Últimas Transações</h6>
 <div class="list-group mb-5 pb-5"> 
     {% for t in transacoes %}
-    <div class="d-flex align-items-center">
+    <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+        
+        <div class="d-flex align-items-center">
             <div style="width: 10px; height: 10px; border-radius: 50%; background-color: {{ t.categoria.cor|default:'#ccc' }}; margin-right: 10px;"></div>
             
             <div>
@@ -92,7 +94,7 @@
                 <small class="text-muted" style="font-size: 0.85rem;">
                     {{ t.data|date:"d/m" }} • {{ t.descricao|truncatechars:20 }}
                 </small>
-                
+
                 <div class="mt-1">
                     {% if t.tipo == 'R' %}
                         <span class="badge bg-success bg-opacity-10 text-success border border-success" style="font-size: 0.65rem;">
@@ -110,12 +112,26 @@
                         {% endif %}
                     {% endif %}
                 </div>
-
             </div>
         </div>
+
+        <div class="d-flex align-items-center">
+            <span class="fw-bold me-3 {% if t.tipo == 'D' %}text-danger{% else %}text-success{% endif %}">
+                R$ {{ t.valor }}
+            </span>
+            
+            <a href="{% url 'excluir_transacao' t.id %}" 
+               class="text-secondary"
+               style="text-decoration: none; font-size: 1.2rem;"
+               onclick="return confirm('Apagar esta transação?');">
+                &times;
+            </a>
+        </div>
+
+    </div>
     {% empty %}
     <div class="text-center mt-4 text-muted">
-        <p>Nenhuma transação registada.</p>
+        <p>Nenhuma transação registrada neste mês.</p>
     </div>
     {% endfor %}
 </div>

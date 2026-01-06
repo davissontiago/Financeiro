@@ -38,7 +38,7 @@ def home(request):
     # 4. Preparação dos Dados para os Gráficos (Função Auxiliar Interna)
     def preparar_dados_grafico(queryset_filtrado):
         # Agrupa por Categoria e soma os valores
-        dados_agrupados = queryset_filtrado.values('categoria__nome', 'categoria__cor').annotate(total=Sum('valor'))
+        dados_agrupados = queryset_filtrado.order_by().values('categoria__nome', 'categoria__cor').annotate(total=Sum('valor'))
         
         labels, data, cores = [], [], []
         for item in dados_agrupados:
