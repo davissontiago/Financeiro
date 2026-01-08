@@ -119,6 +119,9 @@
             <span class="fw-bold me-3 {% if t.tipo == 'D' %}text-danger{% else %}text-success{% endif %}">
                 R$ {{ t.valor }}
             </span>
+
+            <a href="{% url 'editar_transacao' t.id %}" class="text-secondary me-3" style="text-decoration: none; font-size: 1.2rem;">
+                ✎ </a>
             
             <a href="{% url 'excluir_transacao' t.id %}" 
                class="text-secondary"

@@ -39,7 +39,7 @@ def home(request):
         usuario=request.user,
         data__month=mes_atual, 
         data__year=ano_atual
-    ).order_by('-data')
+    ).order_by('-data', '-id')
 
     # Função auxiliar de gráficos
     def preparar_dados_grafico(queryset_filtrado):
@@ -146,3 +146,19 @@ def excluir_transacao(request, id):
     transacao = get_object_or_404(Transacao, id=id, usuario=request.user)
     transacao.delete()
     return redirect('home')
+
+@login_required
+def editar_transacao(request, id):
+    transacao = get_object_or_404(Transacao, id=id, usuario=request.user)
+    
+    if request.method == 'POST':
+        # CORREÇÃO: Passamos request.user como primeiro argumento
+        form = TransacaoForm(request.user, request.POST, instance=transacao)
+        if form.is_valid():
+            form.save()
+            return redirect('home')
+    else:
+        # CORREÇÃO: Passamos request.user aqui também
+        form = TransacaoForm(request.user, instance=transacao)
+    
+    return render(request, 'main/form_transacao.html', {'form': form, 'acao': 'Editar'})
