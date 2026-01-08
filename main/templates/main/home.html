@@ -51,7 +51,7 @@
         <div class="carousel-item active">
             <div class="card shadow-sm border-0">
                 <div class="card-body">
-                    <h6 class="card-title text-center text-muted mb-3">💸 Gastos à Vista / Débito</h6>
+                    <h6 class="card-title text-center text-muted mb-3">💸 Gastos à Vista, Pix e Débito</h6>
                     <div style="position: relative; height: 250px;">
                         <canvas id="graficoAvista"></canvas>
                     </div>
@@ -62,7 +62,7 @@
         <div class="carousel-item">
             <div class="card shadow-sm border-0">
                 <div class="card-body">
-                    <h6 class="card-title text-center text-muted mb-3">💳 Fatura Cartão de Crédito</h6>
+                    <h6 class="card-title text-center text-muted mb-3">💳 Gastos Cartão de Crédito</h6>
                     <div style="position: relative; height: 250px;">
                         <canvas id="graficoCredito"></canvas>
                     </div>
@@ -142,14 +142,57 @@
 <script>
     Chart.register(ChartDataLabels);
 
-    // Função genérica para criar gráficos (evita repetir código)
-    function criarGrafico(canvasId, labels, data, cores, msgVazia) {
+    // --- PLUGIN PARA TEXTO NO CENTRO (CORRIGIDO) ---
+    const centerTextPlugin = {
+        id: 'centerText',
+        beforeDraw: function(chart) {
+            if (chart.config.options.elements.center) {
+                var width = chart.width,
+                    height = chart.height,
+                    ctx = chart.ctx;
+
+                ctx.restore();
+                
+                // 1. Pega o texto
+                var text = chart.config.options.elements.center.text;
+                
+                // --- CORREÇÃO DE SEGURANÇA ---
+                // Se o texto não existir (undefined ou null), para a execução aqui
+                if (!text) return; 
+                
+                // Garante que é uma string
+                text = text.toString();
+                // -----------------------------
+
+                // 2. Cálculo Inteligente da Fonte
+                var fontSize = ((height / 160) * 0.60).toFixed(2); 
+                
+               
+
+                ctx.font = "bold " + fontSize + "em sans-serif";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = "#333";
+
+                // 3. Centraliza e Ajusta Altura
+                var textX = Math.round((width - ctx.measureText(text).width) / 2);
+                var textY = (height / 2) - (height * 0.10); 
+
+                ctx.fillText(text, textX, textY);
+                ctx.save();
+            }
+        }
+    };
+
+    Chart.register(centerTextPlugin);
+
+    function criarGrafico(canvasId, labels, data, cores, totalValor, msgVazia) {
         const ctx = document.getElementById(canvasId).getContext('2d');
         
-        // Formatar Moeda
         const formatarMoeda = (valor) => {
             return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
         };
+
+        const textoTotal = formatarMoeda(totalValor);
 
         if (labels.length > 0) {
             new Chart(ctx, {
@@ -159,12 +202,19 @@
                     datasets: [{
                         data: data,
                         backgroundColor: cores,
-                        borderWidth: 1
+                        borderWidth: 1,
+                        hoverOffset: 4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    cutout: '65%', 
+                    elements: {
+                        center: {
+                            text: textoTotal
+                        }
+                    },
                     plugins: {
                         legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } },
                         tooltip: {
@@ -179,11 +229,12 @@
                         },
                         datalabels: {
                             color: '#fff',
-                            font: { weight: 'bold', size: 12 },
+                            font: { weight: 'bold', size: 11 },
                             formatter: (value, ctx) => {
                                 let sum = 0;
                                 ctx.chart.data.datasets[0].data.map(d => sum += d);
-                                return (value * 100 / sum).toFixed(1) + "%";
+                                let percentage = (value * 100 / sum);
+                                return percentage > 5 ? percentage.toFixed(0) + "%" : "";
                             }
                         }
                     }
@@ -191,26 +242,31 @@
             });
         } else {
             document.getElementById(canvasId).parentElement.innerHTML = 
-                '<div class="text-center mt-5 text-muted"><p>' + msgVazia + '</p></div>';
+                '<div class="text-center mt-5 text-muted d-flex flex-column align-items-center justify-content-center h-100">' +
+                '<span style="font-size: 2rem;">🍃</span>' +
+                '<p class="mt-2">' + msgVazia + '</p>' +
+                '</div>';
         }
     }
 
-    // Renderizar Gráfico À VISTA
+    // Renderiza Gráfico À VISTA
     criarGrafico(
         'graficoAvista', 
         {{ labels_avista|safe }}, 
         {{ data_avista|safe }}, 
         {{ cores_avista|safe }},
-        "Nenhum gasto à vista neste mês."
+        {{ soma_avista|stringformat:".2f" }}, 
+        "Nenhum gasto à vista."
     );
 
-    // Renderizar Gráfico CRÉDITO
+    // Renderiza Gráfico CRÉDITO
     criarGrafico(
         'graficoCredito', 
         {{ labels_credito|safe }}, 
         {{ data_credito|safe }}, 
         {{ cores_credito|safe }},
-        "Nenhum gasto no crédito neste mês."
+        {{ soma_credito|stringformat:".2f" }}, 
+        "Fatura zerada."
     );
 </script>
 

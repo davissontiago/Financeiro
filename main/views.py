@@ -8,12 +8,12 @@ from .forms import TransacaoForm, CategoriaForm
 
 @login_required
 def home(request):
-    # 1. Descobrir qual mês/ano mostrar
+    # 1. Definição de Data (Mês/Ano)
     hoje = timezone.now()
     mes_atual = int(request.GET.get('mes', hoje.month))
     ano_atual = int(request.GET.get('ano', hoje.year))
 
-    # Lista manual para garantir meses em Português
+    # Nomes dos meses
     lista_meses = {
         1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
         5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
@@ -21,43 +21,7 @@ def home(request):
     }
     nome_mes_exibicao = lista_meses[mes_atual]
 
-    # 2. Filtro Principal: Transações do USUÁRIO e do MÊS específico
-    transacoes = Transacao.objects.filter(
-        usuario=request.user,
-        data__month=mes_atual, 
-        data__year=ano_atual
-    ).order_by('-data')
-
-    # 3. Calcular Totais Gerais
-    total_receitas = transacoes.filter(tipo='R').aggregate(Sum('valor'))['valor__sum'] or 0
-    total_despesas = transacoes.filter(tipo='D').aggregate(Sum('valor'))['valor__sum'] or 0
-    despesas_avista = transacoes.filter(tipo='D', metodo='V').aggregate(Sum('valor'))['valor__sum'] or 0
-    saldo = total_receitas - despesas_avista
-    saldo = total_receitas - total_despesas
-
-    # 4. Preparação dos Dados para os Gráficos (Função Auxiliar Interna)
-    def preparar_dados_grafico(queryset_filtrado):
-        # Agrupa por Categoria e soma os valores
-        dados_agrupados = queryset_filtrado.order_by().values('categoria__nome', 'categoria__cor').annotate(total=Sum('valor'))
-        
-        labels, data, cores = [], [], []
-        for item in dados_agrupados:
-            labels.append(item['categoria__nome'] if item['categoria__nome'] else 'Outros')
-            data.append(float(item['total']))
-            cores.append(item['categoria__cor'] if item['categoria__cor'] else '#CCCCCC')
-        return labels, data, cores
-
-    # --- Gráfico 1: À Vista / Débito ---
-    # Filtra apenas despesas (tipo='D') que são à vista (metodo='V')
-    gastos_avista = transacoes.filter(tipo='D', metodo='V')
-    labels_v, data_v, cores_v = preparar_dados_grafico(gastos_avista)
-
-    # --- Gráfico 2: Cartão de Crédito ---
-    # Filtra apenas despesas (tipo='D') que são crédito (metodo='C')
-    gastos_credito = transacoes.filter(tipo='D', metodo='C')
-    labels_c, data_c, cores_c = preparar_dados_grafico(gastos_credito)
-
-    # 5. Lógica de Navegação (Mês Anterior / Próximo)
+    # 2. Navegação (Meses Anterior/Próximo)
     if mes_atual == 1:
         mes_ant, ano_ant = 12, ano_atual - 1
     else:
@@ -68,23 +32,70 @@ def home(request):
     else:
         mes_prox, ano_prox = mes_atual + 1, ano_atual
 
+    # =======================================================
+    # DADOS DO MÊS ATUAL
+    # =======================================================
+    transacoes = Transacao.objects.filter(
+        usuario=request.user,
+        data__month=mes_atual, 
+        data__year=ano_atual
+    ).order_by('-data')
+
+    # Função auxiliar de gráficos
+    def preparar_dados_grafico(queryset_filtrado):
+        dados_agrupados = queryset_filtrado.order_by().values('categoria__nome', 'categoria__cor').annotate(total=Sum('valor'))
+        labels, data, cores = [], [], []
+        for item in dados_agrupados:
+            labels.append(item['categoria__nome'] or 'Outros')
+            data.append(float(item['total']))
+            cores.append(item['categoria__cor'] or '#CCCCCC')
+        return labels, data, cores
+
+    # GRÁFICOS (Apenas informativo)
+    labels_v, data_v, cores_v = preparar_dados_grafico(transacoes.filter(tipo='D', metodo='V'))
+    labels_c, data_c, cores_c = preparar_dados_grafico(transacoes.filter(tipo='D', metodo='C'))
+
+    # =======================================================
+    # CÁLCULO DE SALDO (SIMPLIFICADO E CORRETO)
+    # =======================================================
+    
+    # Receitas (Dinheiro que entrou)
+    total_receitas = transacoes.filter(tipo='R').aggregate(Sum('valor'))['valor__sum'] or 0
+    
+    # Despesas (Dinheiro que SAIU da conta DE FATO neste mês)
+    # Isso inclui gastos no débito E pagamentos de fatura que você registrar manualmente
+    total_despesas = transacoes.filter(tipo='D', metodo='V').aggregate(Sum('valor'))['valor__sum'] or 0
+    
+    # Saldo Real
+    saldo = total_receitas - total_despesas
+
+    # Fatura Acumulada (Apenas para você saber quanto já gastou no crédito este mês)
+    fatura_atual = transacoes.filter(tipo='D', metodo='C').aggregate(Sum('valor'))['valor__sum'] or 0
+
+
+    soma_avista = transacoes.filter(tipo='D', metodo='V').aggregate(Sum('valor'))['valor__sum'] or 0
+
+    # 2. Gráfico Crédito (Fatura Atual)
+    soma_credito = transacoes.filter(tipo='D', metodo='C').aggregate(Sum('valor'))['valor__sum'] or 0
+
+    # ... (Cálculo de Saldo e Totais Gerais mantidos igual ao passo anterior) ...
+
     context = {
         'transacoes': transacoes,
         'total_receitas': total_receitas,
         'total_despesas': total_despesas,
         'saldo': saldo,
+        'fatura_atual': fatura_atual,
         
-        # Dados para o Gráfico À Vista
-        'labels_avista': labels_v,
-        'data_avista': data_v,
-        'cores_avista': cores_v,
+        # Totais específicos para os gráficos (Para desenhar no meio)
+        'soma_avista': soma_avista,
+        'soma_credito': soma_credito,
 
-        # Dados para o Gráfico Crédito
-        'labels_credito': labels_c,
-        'data_credito': data_c,
-        'cores_credito': cores_c,
+        # Gráficos
+        'labels_avista': labels_v, 'data_avista': data_v, 'cores_avista': cores_v,
+        'labels_credito': labels_c, 'data_credito': data_c, 'cores_credito': cores_c,
         
-        # Variáveis de Navegação e Título
+        # Navegação
         'nome_mes_exibicao': nome_mes_exibicao,
         'ano_atual': ano_atual,
         'mes_ant': mes_ant, 'ano_ant': ano_ant,
