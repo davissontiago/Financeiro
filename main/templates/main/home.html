@@ -1,4 +1,4 @@
-{% extends 'main/base.html' %}
+{% extends 'main/base.html' %} {% load static %}
 
 {% block content %}
 
@@ -142,135 +142,32 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 
+<script src="{% static 'js/home.js' %}"></script>
+
 <script>
-    Chart.register(ChartDataLabels);
-
-    // --- PLUGIN PARA TEXTO NO CENTRO (CORRIGIDO) ---
-    const centerTextPlugin = {
-        id: 'centerText',
-        beforeDraw: function(chart) {
-            if (chart.config.options.elements.center) {
-                var width = chart.width,
-                    height = chart.height,
-                    ctx = chart.ctx;
-
-                ctx.restore();
-                
-                // 1. Pega o texto
-                var text = chart.config.options.elements.center.text;
-                
-                // --- CORREÇÃO DE SEGURANÇA ---
-                // Se o texto não existir (undefined ou null), para a execução aqui
-                if (!text) return; 
-                
-                // Garante que é uma string
-                text = text.toString();
-                // -----------------------------
-
-                // 2. Cálculo Inteligente da Fonte
-                var fontSize = ((height / 160) * 0.60).toFixed(2); 
-                
-               
-
-                ctx.font = "bold " + fontSize + "em sans-serif";
-                ctx.textBaseline = "middle";
-                ctx.fillStyle = "#333";
-
-                // 3. Centraliza e Ajusta Altura
-                var textX = Math.round((width - ctx.measureText(text).width) / 2);
-                var textY = (height / 2) - (height * 0.10); 
-
-                ctx.fillText(text, textX, textY);
-                ctx.save();
-            }
-        }
-    };
-
-    Chart.register(centerTextPlugin);
-
-    function criarGrafico(canvasId, labels, data, cores, totalValor, msgVazia) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
+    // Apenas chamamos a função passando os dados do Django
+    document.addEventListener('DOMContentLoaded', function() {
         
-        const formatarMoeda = (valor) => {
-            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
-        };
+        // Gráfico À Vista
+        criarGraficoFinanceiro(
+            'graficoAvista', 
+            {{ labels_avista|safe }}, 
+            {{ data_avista|safe }}, 
+            {{ cores_avista|safe }},
+            "{{ soma_avista|stringformat:'.2f' }}",
+            "Nenhum gasto à vista."
+        );
 
-        const textoTotal = formatarMoeda(totalValor);
-
-        if (labels.length > 0) {
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: cores,
-                        borderWidth: 1,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '65%', 
-                    elements: {
-                        center: {
-                            text: textoTotal
-                        }
-                    },
-                    plugins: {
-                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let value = context.raw;
-                                    let total = context.chart._metasets[context.datasetIndex].total;
-                                    let percentage = ((value / total) * 100).toFixed(1) + '%';
-                                    return context.label + ': ' + formatarMoeda(value) + ' (' + percentage + ')';
-                                }
-                            }
-                        },
-                        datalabels: {
-                            color: '#fff',
-                            font: { weight: 'bold', size: 11 },
-                            formatter: (value, ctx) => {
-                                let sum = 0;
-                                ctx.chart.data.datasets[0].data.map(d => sum += d);
-                                let percentage = (value * 100 / sum);
-                                return percentage > 5 ? percentage.toFixed(0) + "%" : "";
-                            }
-                        }
-                    }
-                }
-            });
-        } else {
-            document.getElementById(canvasId).parentElement.innerHTML = 
-                '<div class="text-center mt-5 text-muted d-flex flex-column align-items-center justify-content-center h-100">' +
-                '<span style="font-size: 2rem;">🍃</span>' +
-                '<p class="mt-2">' + msgVazia + '</p>' +
-                '</div>';
-        }
-    }
-
-    // Renderiza Gráfico À VISTA
-    criarGrafico(
-        'graficoAvista', 
-        {{ labels_avista|safe }}, 
-        {{ data_avista|safe }}, 
-        {{ cores_avista|safe }},
-        {{ soma_avista|stringformat:".2f" }}, 
-        "Nenhum gasto à vista."
-    );
-
-    // Renderiza Gráfico CRÉDITO
-    criarGrafico(
-        'graficoCredito', 
-        {{ labels_credito|safe }}, 
-        {{ data_credito|safe }}, 
-        {{ cores_credito|safe }},
-        {{ soma_credito|stringformat:".2f" }}, 
-        "Fatura zerada."
-    );
+        // Gráfico Crédito
+        criarGraficoFinanceiro(
+            'graficoCredito', 
+            {{ labels_credito|safe }}, 
+            {{ data_credito|safe }}, 
+            {{ cores_credito|safe }},
+            "{{ soma_credito|stringformat:'.2f' }}",
+            "Fatura zerada."
+        );
+    });
 </script>
 
 {% endblock %}
