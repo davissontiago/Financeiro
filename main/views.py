@@ -1,5 +1,5 @@
-import datetime, calendar, uuid
-from datetime import date, timedelta
+import calendar, uuid
+from datetime import date
 from dateutil.relativedelta import relativedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -21,6 +21,8 @@ def home(request):
     hoje = timezone.now()
     mes_atual = int(request.GET.get('mes', hoje.month))
     ano_atual = int(request.GET.get('ano', hoje.year))
+    
+    data_exibicao = date(ano_atual, mes_atual, 1)
 
     # Nomes dos meses
     lista_meses = {
@@ -105,6 +107,7 @@ def home(request):
         'labels_credito': labels_c, 'data_credito': data_c, 'cores_credito': cores_c,
         
         # Navegação
+        'data_exibicao': data_exibicao,
         'nome_mes_exibicao': nome_mes_exibicao,
         'ano_atual': ano_atual,
         'mes_ant': mes_ant, 'ano_ant': ano_ant,

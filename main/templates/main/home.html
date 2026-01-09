@@ -3,22 +3,22 @@
 
 {% block content %}
   <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
-    <a href="?mes={{ mes_ant }}&ano={{ ano_ant }}" class="btn btn-outline-secondary rounded-circle btn-nav-mes">❮</a>
+    <a href="?mes={{ mes_ant }}&ano={{ ano_ant }}" class="btn btn-outline-secondary rounded-circle btn-nav-mes">
+        ❮
+    </a>
 
     <div class="text-center">
-      <h4 class="mb-0 text-capitalize fw-bold">{{ data_exibicao|date:'F Y' }}</h4>
-
-      <small class="{% if saldo >= 0 %}
-          text-success
-        {% else %}
-          text-danger
-        {% endif %} fw-bold">
-        Saldo: R$ {{ saldo|floatformat:2 }}
-      </small>
+        <h4 class="mb-0 text-capitalize fw-bold">{{ data_exibicao|date:"F Y" }}</h4>
+        
+        <small class="{% if saldo >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+            Saldo: R$ {{ saldo|floatformat:2 }}
+        </small>
     </div>
 
-    <a href="?mes={{ mes_prox }}&ano={{ ano_prox }}" class="btn btn-outline-secondary rounded-circle btn-nav-mes">❯</a>
-  </div>
+    <a href="?mes={{ mes_prox }}&ano={{ ano_prox }}" class="btn btn-outline-secondary rounded-circle btn-nav-mes">
+        ❯
+    </a>
+</div>
 
   <div class="row mb-4 text-center">
     <div class="col-6">
