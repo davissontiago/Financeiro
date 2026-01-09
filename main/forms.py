@@ -2,6 +2,15 @@ from django import forms
 from .models import Transacao, Categoria
 
 class TransacaoForm(forms.ModelForm):
+    parcelas = forms.IntegerField(
+        required=False, 
+        initial=1, 
+        min_value=1, 
+        max_value=48,
+        label="Qtd. Parcelas",
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+        
     class Meta:
         model = Transacao
         fields = ['tipo', 'valor', 'data', 'metodo', 'categoria', 'descricao']
@@ -14,7 +23,7 @@ class TransacaoForm(forms.ModelForm):
             'descricao': forms.TextInput(attrs={'class': 'form-control'}),
         }
     def __init__(self, user, *args, **kwargs):
-        super(TransacaoForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields['categoria'].queryset = Categoria.objects.filter(usuario=user)
 
 class CategoriaForm(forms.ModelForm):

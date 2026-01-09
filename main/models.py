@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
+import re
     
 class Categoria(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -31,6 +32,13 @@ class Transacao(models.Model):
     metodo = models.CharField(max_length=1, choices=METODO_CHOICES, default='V', verbose_name="Método")
     
     categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    @property
+    def parcela_atual(self):
+        match = re.search(r'\((\d+/\d+)\)', self.descricao)
+        if match:
+            return match.group(1)
+        return None
     
 
     def __str__(self):
