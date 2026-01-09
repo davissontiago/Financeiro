@@ -1,10 +1,18 @@
-import datetime
+import datetime, calendar
+from datetime import date, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.utils import timezone
 from .models import Transacao, Categoria
 from .forms import TransacaoForm, CategoriaForm
+
+def add_months(source_date, months):
+    month = source_date.month - 1 + months
+    year = source_date.year + month // 12
+    month = month % 12 + 1
+    day = min(source_date.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
 
 @login_required
 def home(request):
@@ -110,12 +118,39 @@ def nova_transacao(request):
     form = TransacaoForm(request.user, request.POST or None)
     
     if form.is_valid():
-        t = form.save(commit=False) # Não salva ainda
-        t.usuario = request.user    # Atribui o dono da transação
-        t.save()                    # Salva agora
+        # 1. Pega o número de parcelas (se não tiver, assume 1)
+        parcelas = form.cleaned_data.get('parcelas', 1) or 1
         
-        # Redireciona para o mês da transação criada
-        return redirect(f'/?mes={t.data.month}&ano={t.data.year}')
+        # 2. Prepara o objeto, mas não salva no banco ainda (commit=False)
+        transacao_temp = form.save(commit=False)
+        transacao_temp.usuario = request.user
+
+        # 3. VERIFICAÇÃO: É Despesa? É Crédito? Tem mais de 1 parcela?
+        if transacao_temp.tipo == 'D' and transacao_temp.metodo == 'C' and parcelas > 1:
+            
+            valor_parcela = transacao_temp.valor / parcelas
+            descricao_original = transacao_temp.descricao
+            data_original = transacao_temp.data
+
+            # Loop para criar cada parcela
+            for i in range(parcelas):
+                Transacao.objects.create(
+                    usuario=request.user,
+                    # Adiciona (1/3), (2/3) na descrição
+                    descricao=f"{descricao_original} ({i+1}/{parcelas})",
+                    valor=valor_parcela,
+                    categoria=transacao_temp.categoria,
+                    tipo='D',
+                    metodo='C',
+                    # A função add_months calcula a data correta para os meses seguintes
+                    data=add_months(data_original, i) 
+                )
+        else:
+            # Se não for parcelado, salva normalmente uma única vez
+            transacao_temp.save()
+        
+        # Redireciona para o mês da transação
+        return redirect(f'/?mes={transacao_temp.data.month}&ano={transacao_temp.data.year}')
     
     return render(request, 'main/form_transacao.html', {'form': form})
 

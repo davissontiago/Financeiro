@@ -114,6 +114,13 @@
                         <span class="badge bg-warning bg-opacity-10 text-warning border border-warning badge-mini">
                             💳 Crédito
                         </span>
+
+                        {% if t.parcela_atual %}
+                            <span class="badge bg-light text-dark border ms-1 badge-mini">
+                                {{ t.parcela_atual }}
+                            </span>
+                        {% endif %}
+
                     {% else %}
                         <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary badge-mini">
                             💵 À Vista
