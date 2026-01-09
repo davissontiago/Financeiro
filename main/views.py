@@ -141,6 +141,22 @@ def excluir_categoria(request, id):
     return redirect('gerenciar_categorias')
 
 @login_required
+def editar_categoria(request, id):
+    # Busca a categoria (garantindo que pertence ao usuário logado)
+    categoria = get_object_or_404(Categoria, id=id, usuario=request.user)
+    
+    if request.method == 'POST':
+        form = CategoriaForm(request.POST, instance=categoria)
+        if form.is_valid():
+            form.save()
+            return redirect('gerenciar_categorias')
+    else:
+        form = CategoriaForm(instance=categoria)
+    
+    # Vamos usar um template separado para não misturar com a lista
+    return render(request, 'main/form_categoria.html', {'form': form})
+
+@login_required
 def excluir_transacao(request, id):
     # Garante que só apaga se for do utilizador
     transacao = get_object_or_404(Transacao, id=id, usuario=request.user)

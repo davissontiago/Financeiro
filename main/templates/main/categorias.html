@@ -31,19 +31,28 @@
         <ul class="list-group mb-5 pb-5">
             
             {% for categoria in categorias %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
+           <li class="list-group-item d-flex justify-content-between align-items-center">
                 
                 <div class="d-flex align-items-center">
-                    <span style="display:inline-block; width: 15px; height: 15px; border-radius: 50%; background-color: {{ categoria.cor }}; margin-right: 10px; border: 1px solid #ddd;"></span>
+                    <span class="category-list-dot" style="background-color: {{ categoria.cor }};"></span>
                     
                     <span class="fw-bold">{{ categoria.nome }}</span>
                 </div>
 
-                <a href="{% url 'excluir_categoria' categoria.id %}" 
-                   class="btn btn-outline-danger btn-sm"
-                   onclick="return confirm('Tem certeza?');">
-                    🗑️
-                </a>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'editar_categoria' categoria.id %}" 
+                       class="btn btn-outline-secondary btn-sm"
+                       title="Editar">
+                        ✎
+                    </a>
+
+                    <a href="{% url 'excluir_categoria' categoria.id %}" 
+                       class="btn btn-outline-danger btn-sm"
+                       onclick="return confirm('Tem certeza?');"
+                       title="Excluir">
+                        🗑️
+                    </a>
+                </div>
             </li>
             {% empty %}
                 <li class="list-group-item text-center text-muted">

@@ -9,6 +9,7 @@ urlpatterns = [
     path('nova/', views.nova_transacao, name='nova_transacao'),
     path('categorias/', views.gerenciar_categorias, name='gerenciar_categorias'),
     path('categorias/excluir/<int:id>/', views.excluir_categoria, name='excluir_categoria'),
+    path('categorias/editar/<int:id>/', views.editar_categoria, name='editar_categoria'),
     path('transacao/excluir/<int:id>/', views.excluir_transacao, name='excluir_transacao'),
     path('transacao/editar/<int:id>/', views.editar_transacao, name='editar_transacao'),
     path('login/', auth_views.LoginView.as_view(), name='login'),

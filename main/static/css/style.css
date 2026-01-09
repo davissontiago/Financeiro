@@ -135,3 +135,18 @@ button.nav-item-app {
     padding-top: 10px;
     /* Controlado via JS (classe d-none do Bootstrap) */
 }
+
+.color-input-wrapper {
+    width: 60px;
+}
+
+/* A CLASSE QUE FAZ A BOLINHA APARECER */
+.category-list-dot {
+    display: inline-block;
+    width: 15px;       /* Tamanho */
+    height: 15px;      /* Tamanho */
+    border-radius: 50%; /* Faz ficar redonda */
+    margin-right: 10px;
+    border: 1px solid #ddd;
+    vertical-align: middle;
+}
