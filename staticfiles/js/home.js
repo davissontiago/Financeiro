@@ -106,3 +106,13 @@ function criarGraficoFinanceiro(canvasId, labels, data, cores, totalValor, msgVa
             '</div>';
     }
 }
+
+function toggleDetails(element) {
+    // Procura a div de detalhes DENTRO do elemento clicado
+    const details = element.querySelector('.transaction-details');
+    
+    if (details) {
+        // Alterna a classe d-none (esconde/mostra) do Bootstrap
+        details.classList.toggle('d-none');
+    }
+}
