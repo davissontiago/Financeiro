@@ -1,168 +1,141 @@
-{% extends 'main/base.html' %} 
+{% extends 'main/base.html' %}
 {% load static %}
 
 {% block content %}
-
-<div class="d-flex justify-content-between align-items-center mb-4 mt-2">
-    <a href="?mes={{ mes_ant }}&ano={{ ano_ant }}" class="btn btn-outline-secondary rounded-circle btn-nav-mes">
-        ❮
-    </a>
+  <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
+    <a href="?mes={{ mes_ant }}&ano={{ ano_ant }}" class="btn btn-outline-secondary rounded-circle btn-nav-mes">❮</a>
 
     <div class="text-center">
-        <h4 class="mb-0 text-capitalize fw-bold">{{ data_exibicao|date:"F Y" }}</h4>
-        
-        <small class="{% if saldo >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
-            Saldo: R$ {{ saldo|floatformat:2 }}
-        </small>
+      <h4 class="mb-0 text-capitalize fw-bold">{{ data_exibicao|date:'F Y' }}</h4>
+
+      <small class="{% if saldo >= 0 %}
+          text-success
+        {% else %}
+          text-danger
+        {% endif %} fw-bold">
+        Saldo: R$ {{ saldo|floatformat:2 }}
+      </small>
     </div>
 
-    <a href="?mes={{ mes_prox }}&ano={{ ano_prox }}" class="btn btn-outline-secondary rounded-circle btn-nav-mes">
-        ❯
-    </a>
-</div>
+    <a href="?mes={{ mes_prox }}&ano={{ ano_prox }}" class="btn btn-outline-secondary rounded-circle btn-nav-mes">❯</a>
+  </div>
 
-<div class="row mb-4 text-center">
+  <div class="row mb-4 text-center">
     <div class="col-6">
-        <div class="card shadow-sm text-white bg-success">
-            <div class="card-body p-2">
-                <small>Entradas</small>
-                <h5 class="mb-0">R$ {{ total_receitas|floatformat:2|default:"0,00" }}</h5>
-            </div>
+      <div class="card shadow-sm text-white bg-success">
+        <div class="card-body p-2">
+          <small>Entradas</small>
+          <h5 class="mb-0">R$ {{ total_receitas|floatformat:2|default:'0,00' }}</h5>
         </div>
+      </div>
     </div>
     <div class="col-6">
-        <div class="card shadow-sm text-white bg-danger">
-            <div class="card-body p-2">
-                <small>Saídas</small>
-                <h5 class="mb-0">R$ {{ total_despesas|floatformat:2|default:"0,00" }}</h5>
-            </div>
+      <div class="card shadow-sm text-white bg-danger">
+        <div class="card-body p-2">
+          <small>Saídas</small>
+          <h5 class="mb-0">R$ {{ total_despesas|floatformat:2|default:'0,00' }}</h5>
         </div>
+      </div>
     </div>
-</div>
+  </div>
 
-<div id="carouselGraficos" class="carousel slide mb-5" data-bs-touch="true" data-bs-interval="false">
-    
+  <div id="carouselGraficos" class="carousel slide mb-5" data-bs-touch="true" data-bs-interval="false">
     <div class="carousel-indicators carousel-indicators-adjust">
-        <button type="button" data-bs-target="#carouselGraficos" data-bs-slide-to="0" class="active bg-dark"></button>
-        <button type="button" data-bs-target="#carouselGraficos" data-bs-slide-to="1" class="bg-dark"></button>
+      <button type="button" data-bs-target="#carouselGraficos" data-bs-slide-to="0" class="active bg-dark"></button>
+      <button type="button" data-bs-target="#carouselGraficos" data-bs-slide-to="1" class="bg-dark"></button>
     </div>
 
     <div class="carousel-inner">
-        
-        <div class="carousel-item active">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <h6 class="card-title text-center text-muted mb-3">💸 Gastos à Vista, Pix e Débito</h6>
-                    <div class="chart-wrapper">
-                        <canvas id="graficoAvista"></canvas>
-                    </div>
-                </div>
+      <div class="carousel-item active">
+        <div class="card shadow-sm border-0">
+          <div class="card-body">
+            <h6 class="card-title text-center text-muted mb-3">💸 Gastos à Vista, Pix e Débito</h6>
+            <div class="chart-wrapper">
+              <canvas id="graficoAvista"></canvas>
             </div>
+          </div>
         </div>
+      </div>
 
-        <div class="carousel-item">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <h6 class="card-title text-center text-muted mb-3">💳 Gastos Cartão de Crédito</h6>
-                    <div class="chart-wrapper">
-                        <canvas id="graficoCredito"></canvas>
-                    </div>
-                </div>
+      <div class="carousel-item">
+        <div class="card shadow-sm border-0">
+          <div class="card-body">
+            <h6 class="card-title text-center text-muted mb-3">💳 Gastos Cartão de Crédito</h6>
+            <div class="chart-wrapper">
+              <canvas id="graficoCredito"></canvas>
             </div>
+          </div>
         </div>
-
+      </div>
     </div>
 
-    <button class="carousel-control-prev" type="button" data-bs-target="#carouselGraficos" data-bs-slide="prev">
-        <span class="carousel-control-prev-icon bg-dark rounded-circle p-2" aria-hidden="true"></span>
-    </button>
-    <button class="carousel-control-next" type="button" data-bs-target="#carouselGraficos" data-bs-slide="next">
-        <span class="carousel-control-next-icon bg-dark rounded-circle p-2" aria-hidden="true"></span>
-    </button>
-</div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#carouselGraficos" data-bs-slide="prev"><span class="carousel-control-prev-icon bg-dark rounded-circle p-2" aria-hidden="true"></span></button>
+    <button class="carousel-control-next" type="button" data-bs-target="#carouselGraficos" data-bs-slide="next"><span class="carousel-control-next-icon bg-dark rounded-circle p-2" aria-hidden="true"></span></button>
+  </div>
 
-<h6 class="text-muted ps-1">Últimas Transações</h6>
+  <h6 class="text-muted ps-1">Últimas Transações</h6>
 
-<div class="d-flex flex-column gap-2 mb-5 pb-5"> 
+  <div class="d-flex flex-column gap-2 mb-5 pb-5">
     {% for t in transacoes %}
-    
-    <div class="transaction-card d-flex shadow-sm" onclick="toggleDetails(this)">
-        
+      <div class="transaction-card d-flex shadow-sm" onclick="toggleDetails(this)">
         <div class="line-indicator" style="background-color: {{ t.categoria.cor|default:'#ccc' }};"></div>
-        
+
         <div class="transaction-content">
-            
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="fw-bold text-dark">{{ t.categoria.nome|default:"Geral" }}</span>
-                
-                <span class="fw-bold {% if t.tipo == 'D' %}text-danger{% else %}text-success{% endif %}">
-                    R$ {{ t.valor }}
-                </span>
-            </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="fw-bold text-dark">{{ t.categoria.nome|default:'Geral' }}</span>
 
-            <div class="d-flex align-items-center mt-1">
-                <small class="text-muted text-small-date me-2">
-                    {{ t.data|date:"d/m/Y" }}
-                </small>
+            <span class="fw-bold {% if t.tipo == 'D' %}
+                text-danger
+              {% else %}
+                text-success
+              {% endif %}">
+              R$ {{ t.valor }}
+            </span>
+          </div>
 
-                {% if t.tipo == 'R' %}
-                    <span class="badge bg-success bg-opacity-10 text-success border border-success badge-mini">
-                        Entrada
-                    </span>
-                {% else %}
-                    {% if t.metodo == 'C' %}
-                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning badge-mini">
-                            💳 Crédito
-                        </span>
+          <div class="d-flex align-items-center mt-1">
+            <small class="text-muted text-small-date me-2">{{ t.data|date:'d/m/Y' }}</small>
 
-                        {% if t.parcela_atual %}
-                            <span class="badge bg-light text-dark border ms-1 badge-mini">
-                                {{ t.parcela_atual }}
-                            </span>
-                        {% endif %}
+            {% if t.tipo == 'R' %}
+              <span class="badge bg-success bg-opacity-10 text-success border border-success badge-mini">Entrada</span>
+            {% else %}
+              {% if t.metodo == 'C' %}
+                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning badge-mini">💳 Crédito</span>
 
-                    {% else %}
-                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary badge-mini">
-                            💵 À Vista
-                        </span>
-                    {% endif %}
+                {% if t.parcela_total > 1 %}
+                  <span class="badge bg-light text-dark border ms-1 badge-mini">{{ t.parcela_atual }}/{{ t.parcela_total }}</span>
                 {% endif %}
+              {% else %}
+                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary badge-mini">💵 À Vista</span>
+              {% endif %}
+            {% endif %}
+          </div>
+
+          <div class="transaction-details d-none">
+            <p class="text-muted mb-3 small">
+              <strong>Descrição:</strong> {{ t.descricao|default:'Sem descrição' }}
+            </p>
+
+            <div class="d-flex justify-content-end gap-3">
+              <a href="{% url 'editar_transacao' t.id %}" class="btn btn-sm btn-outline-secondary">✎ Editar</a>
+
+              <a href="{% url 'excluir_transacao' t.id %}" class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); return confirm('Apagar esta transação?');">&times; Excluir</a>
             </div>
-
-            <div class="transaction-details d-none">
-                
-                <p class="text-muted mb-3 small">
-                    <strong>Descrição:</strong> {{ t.descricao|default:"Sem descrição" }}
-                </p>
-
-                <div class="d-flex justify-content-end gap-3">
-                    <a href="{% url 'editar_transacao' t.id %}" class="btn btn-sm btn-outline-secondary">
-                        ✎ Editar
-                    </a>
-                    
-                    <a href="{% url 'excluir_transacao' t.id %}" 
-                       class="btn btn-sm btn-outline-danger"
-                       onclick="event.stopPropagation(); return confirm('Apagar esta transação?');">
-                        &times; Excluir
-                    </a>
-                </div>
-            </div>
-
+          </div>
         </div>
-    </div>
-
+      </div>
     {% empty %}
-    <div class="text-center mt-4 text-muted">
+      <div class="text-center mt-4 text-muted">
         <p>Nenhuma transação registrada neste mês.</p>
-    </div>
+      </div>
     {% endfor %}
-</div>
+  </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-<script src="{% static 'js/home.js' %}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+  <script src="{% static 'js/home.js' %}"></script>
 
-<script>
+  <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Gráfico À Vista
         criarGraficoFinanceiro(
@@ -185,5 +158,4 @@
         );
     });
 </script>
-
 {% endblock %}

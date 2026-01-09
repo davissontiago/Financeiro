@@ -1,5 +1,6 @@
-import datetime, calendar
+import datetime, calendar, uuid
 from datetime import date, timedelta
+from dateutil.relativedelta import relativedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
@@ -114,45 +115,48 @@ def home(request):
 
 @login_required
 def nova_transacao(request):
-    # Passamos request.user para o form filtrar as categorias corretamente
     form = TransacaoForm(request.user, request.POST or None)
     
     if form.is_valid():
-        # 1. Pega o número de parcelas (se não tiver, assume 1)
-        parcelas = form.cleaned_data.get('parcelas', 1) or 1
+        transacao_base = form.save(commit=False)
+        transacao_base.usuario = request.user
         
-        # 2. Prepara o objeto, mas não salva no banco ainda (commit=False)
-        transacao_temp = form.save(commit=False)
-        transacao_temp.usuario = request.user
-
-        # 3. VERIFICAÇÃO: É Despesa? É Crédito? Tem mais de 1 parcela?
-        if transacao_temp.tipo == 'D' and transacao_temp.metodo == 'C' and parcelas > 1:
+        # Pega a quantidade de parcelas do formulário
+        qtd_parcelas = form.cleaned_data.get('parcelas', 1) or 1
+        
+        # LÓGICA DO PARCELAMENTO
+        if transacao_base.tipo == 'D' and transacao_base.metodo == 'C' and qtd_parcelas > 1:
+            valor_total = transacao_base.valor
+            valor_parcela = valor_total / qtd_parcelas
+            data_inicial = transacao_base.data
             
-            valor_parcela = transacao_temp.valor / parcelas
-            descricao_original = transacao_temp.descricao
-            data_original = transacao_temp.data
-
-            # Loop para criar cada parcela
-            for i in range(parcelas):
+            # Gera um ID único para este grupo de parcelas
+            grupo_id = uuid.uuid4()
+            
+            for i in range(qtd_parcelas):
                 Transacao.objects.create(
                     usuario=request.user,
-                    # Adiciona (1/3), (2/3) na descrição
-                    descricao=f"{descricao_original} ({i+1}/{parcelas})",
+                    descricao=transacao_base.descricao,
                     valor=valor_parcela,
-                    categoria=transacao_temp.categoria,
+                    categoria=transacao_base.categoria,
                     tipo='D',
                     metodo='C',
-                    # A função add_months calcula a data correta para os meses seguintes
-                    data=add_months(data_original, i) 
+                    # relativedelta soma meses corretamente (ex: 31/jan + 1 mês = 28/fev)
+                    data=data_inicial + relativedelta(months=i),
+                    
+                    # Vínculo do grupo
+                    id_parcelamento=grupo_id,
+                    parcela_atual=i+1,
+                    parcela_total=qtd_parcelas
                 )
         else:
-            # Se não for parcelado, salva normalmente uma única vez
-            transacao_temp.save()
+            # Compra à vista ou comum
+            transacao_base.save()
         
-        # Redireciona para o mês da transação
-        return redirect(f'/?mes={transacao_temp.data.month}&ano={transacao_temp.data.year}')
+        return redirect(f'/?mes={transacao_base.data.month}&ano={transacao_base.data.year}')
     
     return render(request, 'main/form_transacao.html', {'form': form})
+
 
 @login_required
 def gerenciar_categorias(request):
@@ -193,23 +197,80 @@ def editar_categoria(request, id):
 
 @login_required
 def excluir_transacao(request, id):
-    # Garante que só apaga se for do utilizador
     transacao = get_object_or_404(Transacao, id=id, usuario=request.user)
-    transacao.delete()
+    
+    # Se tem id_parcelamento, apaga TODAS as irmãs
+    if transacao.id_parcelamento:
+        Transacao.objects.filter(id_parcelamento=transacao.id_parcelamento).delete()
+    else:
+        transacao.delete()
+        
     return redirect('home')
 
 @login_required
 def editar_transacao(request, id):
-    transacao = get_object_or_404(Transacao, id=id, usuario=request.user)
+    transacao_atual = get_object_or_404(Transacao, id=id, usuario=request.user)
     
+    # Se for POST, vamos SALVAR
     if request.method == 'POST':
-        # CORREÇÃO: Passamos request.user como primeiro argumento
-        form = TransacaoForm(request.user, request.POST, instance=transacao)
+        form = TransacaoForm(request.user, request.POST)
         if form.is_valid():
-            form.save()
+            # 1. Apaga a transação antiga (e o grupo dela se existir)
+            if transacao_atual.id_parcelamento:
+                Transacao.objects.filter(id_parcelamento=transacao_atual.id_parcelamento).delete()
+            else:
+                transacao_atual.delete()
+            
+            # 2. Recria como se fosse nova (usa a mesma lógica da nova_transacao)
+            nova = form.save(commit=False)
+            nova.usuario = request.user
+            qtd_parcelas = form.cleaned_data.get('parcelas', 1) or 1
+            
+            if nova.tipo == 'D' and nova.metodo == 'C' and qtd_parcelas > 1:
+                valor_parcela = nova.valor / qtd_parcelas
+                grupo_id = uuid.uuid4()
+                for i in range(qtd_parcelas):
+                    Transacao.objects.create(
+                        usuario=request.user,
+                        descricao=nova.descricao,
+                        valor=valor_parcela,
+                        categoria=nova.categoria,
+                        tipo='D',
+                        metodo='C',
+                        data=nova.data + relativedelta(months=i),
+                        id_parcelamento=grupo_id,
+                        parcela_atual=i+1,
+                        parcela_total=qtd_parcelas
+                    )
+            else:
+                nova.save()
+                
             return redirect('home')
+
+    # Se for GET (Abrir o formulário), PREPARAMOS OS DADOS
     else:
-        # CORREÇÃO: Passamos request.user aqui também
-        form = TransacaoForm(request.user, instance=transacao)
+        dados_iniciais = {
+            'descricao': transacao_atual.descricao,
+            'categoria': transacao_atual.categoria,
+            'tipo': transacao_atual.tipo,
+            'metodo': transacao_atual.metodo,
+        }
+
+        # Se for parcelado, precisamos SOMAR tudo para mostrar o valor TOTAL da compra
+        if transacao_atual.id_parcelamento:
+            grupo = Transacao.objects.filter(id_parcelamento=transacao_atual.id_parcelamento)
+            valor_total_compra = grupo.aggregate(Sum('valor'))['valor__sum']
+            primeira_parcela = grupo.order_by('data').first()
+            
+            dados_iniciais['valor'] = valor_total_compra
+            dados_iniciais['data'] = primeira_parcela.data
+            dados_iniciais['parcelas'] = transacao_atual.parcela_total # Preenche o campo de parcelas
+        else:
+            dados_iniciais['valor'] = transacao_atual.valor
+            dados_iniciais['data'] = transacao_atual.data
+            dados_iniciais['parcelas'] = 1
+
+        # Carrega o form com esses dados calculados
+        form = TransacaoForm(request.user, initial=dados_iniciais)
     
     return render(request, 'main/form_transacao.html', {'form': form, 'acao': 'Editar'})

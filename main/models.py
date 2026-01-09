@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
-import re
+import uuid
     
 class Categoria(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -33,13 +33,12 @@ class Transacao(models.Model):
     
     categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, null=True, blank=True)
     
-    @property
-    def parcela_atual(self):
-        match = re.search(r'\((\d+/\d+)\)', self.descricao)
-        if match:
-            return match.group(1)
-        return None
-    
+    id_parcelamento = models.UUIDField(null=True, blank=True) 
+
+    parcela_atual = models.IntegerField(default=1)  
+    parcela_total = models.IntegerField(default=1) 
 
     def __str__(self):
-        return f"{self.descricao} - {self.usuario.username}"
+        if self.parcela_total > 1:
+            return f"{self.descricao} ({self.parcela_atual}/{self.parcela_total})"
+        return f"{self.descricao}"
