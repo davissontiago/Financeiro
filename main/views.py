@@ -65,6 +65,16 @@ def home(request):
     # GRÁFICOS (Apenas informativo)
     labels_v, data_v, cores_v = preparar_dados_grafico(transacoes.filter(tipo='D', metodo='V'))
     labels_c, data_c, cores_c = preparar_dados_grafico(transacoes.filter(tipo='D', metodo='C'))
+    
+    transacoes = Transacao.objects.filter(
+        usuario=request.user, 
+        data__month=mes_atual, 
+        data__year=ano_atual
+    ).order_by('-data', '-id')
+    
+    transacoes_avista = transacoes.exclude(metodo='C')
+    
+    transacoes_credito = transacoes.filter(metodo='C')
 
     # =======================================================
     # CÁLCULO DE SALDO (SIMPLIFICADO E CORRETO)
@@ -97,6 +107,9 @@ def home(request):
         'total_despesas': total_despesas,
         'saldo': saldo,
         'fatura_atual': fatura_atual,
+        
+        'transacoes_avista': transacoes_avista,  
+        'transacoes_credito': transacoes_credito,
         
         # Totais específicos para os gráficos (Para desenhar no meio)
         'soma_avista': soma_avista,
