@@ -6,19 +6,20 @@
 <div class="row justify-content-center">
     <div class="col-md-8">
         
-        <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
-            <h4 class="mb-0">Gerenciar Categorias</h4>
-            <a href="{% url 'nova_categoria' %}" class="btn btn-success shadow-sm">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 mb-4 mt-2">
+            <h4 class="mb-0 fw-bold">Categorias</h4>
+            
+            <a href="{% url 'nova_categoria' %}" class="btn btn-success shadow-sm w-100 w-sm-auto">
                 + Nova Categoria
             </a>
         </div>
 
         <div class="d-flex justify-content-center gap-2 mb-4">
             <button onclick="filtrarCategorias('D', this)" class="btn btn-sm btn-dark rounded-pill px-3 btn-filtro active">
-                💸 Despesa
+                💸 Gastos
             </button>
             <button onclick="filtrarCategorias('R', this)" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-filtro">
-                💰 Receita
+                💰 Rendas
             </button>
             <button onclick="filtrarCategorias('todas', this)" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-filtro">
                 📋 Todas
@@ -32,30 +33,34 @@
                 <li class="list-group-item d-flex justify-content-between align-items-center py-3 categoria-item" 
                     data-tipo="{{ categoria.tipo }}">
                     
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="rounded-circle shadow-sm" 
-                              style="width: 24px; height: 24px; background-color: {{ categoria.cor }}; display: inline-block;">
+                    <div class="d-flex align-items-center gap-3 overflow-hidden">
+                        <span class="rounded-circle shadow-sm flex-shrink-0" 
+                              style="width: 20px; height: 20px; background-color: {{ categoria.cor }};">
                         </span>
                         
-                        <div class="d-flex flex-column">
-                            <span class="fw-bold text-dark">{{ categoria.nome }}</span>
-                            </div>
-
-                        {% if categoria.ignorar_grafico %}
-                            <span class="text-muted ms-2" title="Oculto nos Gráficos" style="cursor: help;">👁️‍🗨️</span>
-                        {% endif %}
+                        <div class="d-flex flex-column" style="min-width: 0;">
+                            <span class="fw-bold text-dark text-truncate">{{ categoria.nome }}</span>
+                            
+                            {% if categoria.ignorar_grafico %}
+                                <span class="badge bg-light text-muted border mt-1" style="font-size: 0.65rem; width: fit-content;">
+                                    Oculto no Gráfico
+                                </span>
+                            {% endif %}
+                        </div>
                     </div>
 
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 ms-2">
                         <a href="{% url 'editar_categoria' categoria.id %}" 
-                           class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                            Editar
+                           class="btn btn-outline-secondary btn-sm px-2"
+                           title="Editar">
+                            ✎
                         </a>
 
                         <a href="{% url 'excluir_categoria' categoria.id %}" 
-                           class="btn btn-outline-danger btn-sm rounded-pill px-3"
-                           onclick="return confirm('Tem certeza que deseja excluir a categoria {{ categoria.nome }}?');">
-                            Excluir
+                           class="btn btn-outline-danger btn-sm px-2"
+                           onclick="return confirm('Tem certeza que deseja excluir a categoria {{ categoria.nome }}?');"
+                           title="Excluir">
+                            ✕
                         </a>
                     </div>
                 </li>
@@ -78,8 +83,8 @@
 </div>
 
 <script>
-    // Inicializa mostrando apenas Gastos (D) para seguir o padrão da Home
     document.addEventListener('DOMContentLoaded', function() {
+        // Inicializa mostrando Gastos
         filtrarCategorias('D', document.querySelector('.btn-filtro.active'));
     });
 
@@ -88,10 +93,9 @@
         let visiveis = 0;
 
         itens.forEach(item => {
-            // Se for 'todas' OU o tipo bater com o data-tipo do item
             if (tipo === 'todas' || item.getAttribute('data-tipo') === tipo) {
                 item.classList.remove('d-none');
-                item.classList.add('d-flex'); // Garante que o layout flex volte
+                item.classList.add('d-flex');
                 visiveis++;
             } else {
                 item.classList.add('d-none');
@@ -99,7 +103,6 @@
             }
         });
 
-        // Controle da mensagem de "Nada encontrado"
         const msgVazio = document.getElementById('msg-vazio');
         if (visiveis === 0 && itens.length > 0) {
             msgVazio.classList.remove('d-none');
@@ -107,7 +110,6 @@
             msgVazio.classList.add('d-none');
         }
 
-        // Atualiza estilo dos botões
         document.querySelectorAll('.btn-filtro').forEach(btn => {
             btn.classList.remove('btn-dark', 'active');
             btn.classList.add('btn-outline-secondary');
