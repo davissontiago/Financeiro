@@ -228,7 +228,7 @@
             {{ labels_avista|safe }}, 
             {{ data_avista|safe }}, 
             {{ cores_avista|safe }},
-            "{{ soma_avista|stringformat:'.2f' }}",
+            "{{ soma_grafico_avista|stringformat:'.2f' }}",
             "Nenhum gasto à vista."
         );
 
@@ -237,7 +237,7 @@
             {{ labels_credito|safe }}, 
             {{ data_credito|safe }}, 
             {{ cores_credito|safe }},
-            "{{ soma_credito|stringformat:'.2f' }}",
+            "{{ soma_grafico_credito|stringformat:'.2f' }}",
             "Fatura zerada."
         );
 
@@ -246,7 +246,7 @@
             {{ labels_total|safe }}, 
             {{ data_total|safe }}, 
             {{ cores_total|safe }},
-            "{{ soma_total_gastos|stringformat:'.2f' }}",
+            "{{ soma_grafico_total|stringformat:'.2f' }}",
             "Nenhuma despesa no mês."
         );
 
@@ -255,7 +255,7 @@
             {{ labels_receitas|safe }}, 
             {{ data_receitas|safe }}, 
             {{ cores_receitas|safe }},
-            "{{ total_receitas|stringformat:'.2f' }}",
+            "{{ soma_grafico_receitas|stringformat:'.2f' }}",
             "Nenhuma receita."
         );
     });

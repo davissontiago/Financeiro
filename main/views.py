@@ -70,16 +70,22 @@ def home(request):
     # Soma das Despesas que saíram da conta (À vista/Débito)
     # Nota: Usamos a mesma lógica da lista 'avista' para manter consistência
     total_despesas = transacoes_avista.aggregate(Sum('valor'))['valor__sum'] or 0
+
+    # Fatura Atual (Soma do que foi gasto no Crédito)
+    fatura_atual = transacoes_credito.aggregate(Sum('valor'))['valor__sum'] or 0
     
     # Saldo (O que entrou - O que saiu da conta)
     saldo = total_receitas - total_despesas
 
-    # Fatura Atual (Soma do que foi gasto no Crédito)
-    fatura_atual = transacoes_credito.aggregate(Sum('valor'))['valor__sum'] or 0
+    def somar_para_grafico(queryset):
+        return queryset.exclude(categoria__ignorar_grafico=True).aggregate(Sum('valor'))['valor__sum'] or 0
 
-    # Totais para os textos do gráfico (Centro da Rosca)
-    soma_avista = total_despesas
-    soma_credito = fatura_atual
+    soma_grafico_receitas = somar_para_grafico(transacoes_receitas)
+    soma_grafico_avista = somar_para_grafico(transacoes_avista)
+    soma_grafico_credito = somar_para_grafico(transacoes_credito)
+    
+    # Total Geral de Despesas (Conta + Crédito) para o gráfico principal
+    soma_grafico_total = transacoes.filter(tipo='D').exclude(categoria__ignorar_grafico=True).aggregate(Sum('valor'))['valor__sum'] or 0
 
     # =======================================================
     # 5. PREPARAÇÃO DOS GRÁFICOS
@@ -116,8 +122,10 @@ def home(request):
         'total_despesas': total_despesas,
         'saldo': saldo,
         'fatura_atual': fatura_atual,
-        'soma_avista': soma_avista,
-        'soma_credito': soma_credito,
+        'soma_grafico_receitas': soma_grafico_receitas,
+        'soma_grafico_avista': soma_grafico_avista,
+        'soma_grafico_credito': soma_grafico_credito,
+        'soma_grafico_total': soma_grafico_total,
 
         # Dados dos Gráficos
         'soma_total_gastos': soma_total_gastos,
