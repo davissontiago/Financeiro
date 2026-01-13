@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/enviar-notificacao/",
-      "schedule": "0 15,21,0 * * *"
+      "schedule": "0 0 * * *"
     }
   ],
   "builds": [{
