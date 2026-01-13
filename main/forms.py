@@ -22,14 +22,26 @@ class TransacaoForm(forms.ModelForm):
             'categoria': forms.Select(attrs={'class': 'form-select'}),
             'descricao': forms.TextInput(attrs={'class': 'form-control'}),
         }
+        
     def __init__(self, user, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['categoria'].queryset = Categoria.objects.filter(usuario=user)
+        # 1. Filtra as categorias do usuário e ordena por nome
+        categorias = Categoria.objects.filter(usuario=user).order_by('nome')
+        self.fields['categoria'].queryset = categorias
+
+        # 2. Criamos as opções manualmente para incluir o tipo no texto ou lógica
+        # Vamos usar o prefixo de emoji no texto para o JS identificar facilmente
+        choices = [('', '---------')]
+        for cat in categorias:
+            prefixo = '🔴' if cat.tipo == 'D' else '🟢'
+            choices.append((cat.id, f"{prefixo} {cat.nome}"))
+        
+        self.fields['categoria'].choices = choices
 
 class CategoriaForm(forms.ModelForm):
     class Meta:
         model = Categoria
-        fields = ['nome', 'cor']
+        fields = ['nome', 'tipo', 'cor', 'ignorar_grafico']
         widgets = {
             'nome': forms.TextInput(attrs={
                 'class': 'form-control', 
@@ -40,5 +52,9 @@ class CategoriaForm(forms.ModelForm):
                 'class': 'form-control form-control-color', 
                 'title': 'Escolha uma cor'
             }),
+            'tipo': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'ignorar_grafico': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'width: 20px; height: 20px;'}),
         
         }

@@ -17,22 +17,16 @@ def add_months(source_date, months):
 
 @login_required
 def home(request):
-    # 1. Definição de Data (Mês/Ano)
+    # =======================================================
+    # 1. DEFINIÇÃO DE DATA E NAVEGAÇÃO
+    # =======================================================
     hoje = timezone.now()
     mes_atual = int(request.GET.get('mes', hoje.month))
     ano_atual = int(request.GET.get('ano', hoje.year))
     
     data_exibicao = date(ano_atual, mes_atual, 1)
 
-    # Nomes dos meses
-    lista_meses = {
-        1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
-        5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
-        9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
-    }
-    nome_mes_exibicao = lista_meses[mes_atual]
-
-    # 2. Navegação (Meses Anterior/Próximo)
+    # Navegação (Meses Anterior/Próximo)
     if mes_atual == 1:
         mes_ant, ano_ant = 12, ano_atual - 1
     else:
@@ -44,16 +38,54 @@ def home(request):
         mes_prox, ano_prox = mes_atual + 1, ano_atual
 
     # =======================================================
-    # DADOS DO MÊS ATUAL
+    # 2. CONSULTA PRINCIPAL AO BANCO
     # =======================================================
-    transacoes = Transacao.objects.filter(
+    # select_related otimiza o carregamento das categorias
+    transacoes = Transacao.objects.select_related('categoria').filter(
         usuario=request.user,
         data__month=mes_atual, 
         data__year=ano_atual
     ).order_by('-data', '-id')
 
-    # Função auxiliar de gráficos
+    # =======================================================
+    # 3. SEPARAÇÃO DAS LISTAS PARA EXIBIÇÃO
+    # =======================================================
+    
+    # Lista 1: Receitas (Entradas)
+    transacoes_receitas = transacoes.filter(tipo='R')
+
+    # Lista 2: Despesas em Conta (Pix, Débito - Exclui Crédito e Receitas)
+    transacoes_avista = transacoes.filter(tipo='D').exclude(metodo='C')
+
+    # Lista 3: Despesas no Cartão de Crédito
+    transacoes_credito = transacoes.filter(tipo='D', metodo='C')
+
+    # =======================================================
+    # 4. CÁLCULO DE SALDOS E TOTAIS
+    # =======================================================
+    
+    # Soma das Receitas
+    total_receitas = transacoes_receitas.aggregate(Sum('valor'))['valor__sum'] or 0
+    
+    # Soma das Despesas que saíram da conta (À vista/Débito)
+    # Nota: Usamos a mesma lógica da lista 'avista' para manter consistência
+    total_despesas = transacoes_avista.aggregate(Sum('valor'))['valor__sum'] or 0
+    
+    # Saldo (O que entrou - O que saiu da conta)
+    saldo = total_receitas - total_despesas
+
+    # Fatura Atual (Soma do que foi gasto no Crédito)
+    fatura_atual = transacoes_credito.aggregate(Sum('valor'))['valor__sum'] or 0
+
+    # Totais para os textos do gráfico (Centro da Rosca)
+    soma_avista = total_despesas
+    soma_credito = fatura_atual
+
+    # =======================================================
+    # 5. PREPARAÇÃO DOS GRÁFICOS
+    # =======================================================
     def preparar_dados_grafico(queryset_filtrado):
+        queryset_filtrado = queryset_filtrado.exclude(categoria__ignorar_grafico=True)
         dados_agrupados = queryset_filtrado.order_by().values('categoria__nome', 'categoria__cor').annotate(total=Sum('valor'))
         labels, data, cores = [], [], []
         for item in dados_agrupados:
@@ -62,66 +94,33 @@ def home(request):
             cores.append(item['categoria__cor'] or '#CCCCCC')
         return labels, data, cores
 
-    # GRÁFICOS (Apenas informativo)
-    labels_v, data_v, cores_v = preparar_dados_grafico(transacoes.filter(tipo='D', metodo='V'))
-    labels_c, data_c, cores_c = preparar_dados_grafico(transacoes.filter(tipo='D', metodo='C'))
-    
-    transacoes = Transacao.objects.filter(
-        usuario=request.user, 
-        data__month=mes_atual, 
-        data__year=ano_atual
-    ).order_by('-data', '-id')
-    
-    transacoes_avista = transacoes.exclude(metodo='C')
-    
-    transacoes_credito = transacoes.filter(metodo='C')
+    # Gera dados apenas para as despesas
+    labels_v, data_v, cores_v = preparar_dados_grafico(transacoes_avista)
+    labels_c, data_c, cores_c = preparar_dados_grafico(transacoes_credito)
 
     # =======================================================
-    # CÁLCULO DE SALDO (SIMPLIFICADO E CORRETO)
+    # 6. CONTEXTO E RENDERIZAÇÃO
     # =======================================================
-    
-    # Receitas (Dinheiro que entrou)
-    total_receitas = transacoes.filter(tipo='R').aggregate(Sum('valor'))['valor__sum'] or 0
-    
-    # Despesas (Dinheiro que SAIU da conta DE FATO neste mês)
-    # Isso inclui gastos no débito E pagamentos de fatura que você registrar manualmente
-    total_despesas = transacoes.filter(tipo='D', metodo='V').aggregate(Sum('valor'))['valor__sum'] or 0
-    
-    # Saldo Real
-    saldo = total_receitas - total_despesas
-
-    # Fatura Acumulada (Apenas para você saber quanto já gastou no crédito este mês)
-    fatura_atual = transacoes.filter(tipo='D', metodo='C').aggregate(Sum('valor'))['valor__sum'] or 0
-
-
-    soma_avista = transacoes.filter(tipo='D', metodo='V').aggregate(Sum('valor'))['valor__sum'] or 0
-
-    # 2. Gráfico Crédito (Fatura Atual)
-    soma_credito = transacoes.filter(tipo='D', metodo='C').aggregate(Sum('valor'))['valor__sum'] or 0
-
-    # ... (Cálculo de Saldo e Totais Gerais mantidos igual ao passo anterior) ...
-
     context = {
-        'transacoes': transacoes,
+        # Listas de Transações
+        'transacoes_receitas': transacoes_receitas,
+        'transacoes_avista': transacoes_avista,  
+        'transacoes_credito': transacoes_credito,
+        
+        # Totais Financeiros
         'total_receitas': total_receitas,
         'total_despesas': total_despesas,
         'saldo': saldo,
         'fatura_atual': fatura_atual,
-        
-        'transacoes_avista': transacoes_avista,  
-        'transacoes_credito': transacoes_credito,
-        
-        # Totais específicos para os gráficos (Para desenhar no meio)
         'soma_avista': soma_avista,
         'soma_credito': soma_credito,
 
-        # Gráficos
+        # Dados dos Gráficos
         'labels_avista': labels_v, 'data_avista': data_v, 'cores_avista': cores_v,
         'labels_credito': labels_c, 'data_credito': data_c, 'cores_credito': cores_c,
         
         # Navegação
         'data_exibicao': data_exibicao,
-        'nome_mes_exibicao': nome_mes_exibicao,
         'ano_atual': ano_atual,
         'mes_ant': mes_ant, 'ano_ant': ano_ant,
         'mes_prox': mes_prox, 'ano_prox': ano_prox,
@@ -176,17 +175,8 @@ def nova_transacao(request):
 
 @login_required
 def gerenciar_categorias(request):
-    # Filtra apenas categorias do utilizador logado
     categorias = Categoria.objects.filter(usuario=request.user)
-    form = CategoriaForm(request.POST or None)
-    
-    if form.is_valid():
-        cat = form.save(commit=False)
-        cat.usuario = request.user # Atribui o dono da categoria
-        cat.save()
-        return redirect('gerenciar_categorias')
-
-    return render(request, 'main/categorias.html', {'categorias': categorias, 'form': form})
+    return render(request, 'main/categorias.html', {'categorias': categorias})
 
 @login_required
 def excluir_categoria(request, id):
@@ -194,6 +184,19 @@ def excluir_categoria(request, id):
     categoria = get_object_or_404(Categoria, id=id, usuario=request.user)
     categoria.delete()
     return redirect('gerenciar_categorias')
+
+@login_required
+def nova_categoria(request):
+    form = CategoriaForm(request.POST or None)
+    
+    if form.is_valid():
+        cat = form.save(commit=False)
+        cat.usuario = request.user
+        cat.save()
+        return redirect('gerenciar_categorias')
+    
+    # Reusa o template de formulário, passando o contexto "Nova"
+    return render(request, 'main/form_categoria.html', {'form': form, 'acao': 'Nova'})
 
 @login_required
 def editar_categoria(request, id):
@@ -209,7 +212,7 @@ def editar_categoria(request, id):
         form = CategoriaForm(instance=categoria)
     
     # Vamos usar um template separado para não misturar com a lista
-    return render(request, 'main/form_categoria.html', {'form': form})
+    return render(request, 'main/form_categoria.html', {'form': form, 'acao': 'Editar'})
 
 @login_required
 def excluir_transacao(request, id):

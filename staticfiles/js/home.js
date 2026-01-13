@@ -38,17 +38,31 @@ if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
     Chart.register(centerTextPlugin);
 }
 
+Chart.getChart = Chart.getChart; // Garante que a lib está carregada
+if (Chart.registry && Chart.registry.plugins) {
+    // Remove registros antigos de plugins de centro que podem ter ficado na memória do navegador
+    const pluginsGerais = ['centerText', 'center', 'centerTextCustom'];
+    pluginsGerais.forEach(id => {
+        try { Chart.unregister(Chart.registry.getPlugin(id)); } catch(e) {}
+    });
+}
+
 // Função Genérica para Criar Gráficos
 function criarGraficoFinanceiro(canvasId, labels, data, cores, totalValor, msgVazia) {
-    const ctx = document.getElementById(canvasId).getContext('2d');
+    const canvasElement = document.getElementById(canvasId);
+    if (!canvasElement) return;
+    
+    const chartExistente = Chart.getChart(canvasId);
+    if (chartExistente) {
+        chartExistente.destroy();
+    }
+
+    const ctx = canvasElement.getContext('2d');
     
     const formatarMoeda = (valor) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
     };
 
-    // Converte string python (ex: "1000,50") para float se necessário
-    // Mas aqui esperamos que totalValor venha formatado ou número
-    // Se vier do Django como string formatada (float), parseamos:
     let valorNumerico = parseFloat(totalValor.toString().replace(',', '.'));
     const textoTotal = formatarMoeda(valorNumerico);
 
@@ -68,13 +82,11 @@ function criarGraficoFinanceiro(canvasId, labels, data, cores, totalValor, msgVa
                 responsive: true,
                 maintainAspectRatio: false,
                 cutout: '75%', 
-                elements: {
-                    center: {
-                        text: textoTotal
-                    }
-                },
                 plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } },
+                    legend: { 
+                        position: 'bottom', 
+                        labels: { boxWidth: 12, padding: 15 } 
+                    },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
@@ -85,21 +97,39 @@ function criarGraficoFinanceiro(canvasId, labels, data, cores, totalValor, msgVa
                             }
                         }
                     },
+                    // AJUSTE AQUI: Formatação das porcentagens dentro das fatias
                     datalabels: {
                         color: '#fff',
                         font: { weight: 'bold', size: 11 },
-                        formatter: (value, ctx) => {
-                            let sum = 0;
-                            ctx.chart.data.datasets[0].data.map(d => sum += d);
-                            let percentage = (value * 100 / sum);
-                            return percentage > 5 ? percentage.toFixed(0) + "%" : "";
+                        formatter: (value, context) => {
+                            const dataset = context.chart.data.datasets[0];
+                            const total = dataset.data.reduce((acc, curr) => acc + curr, 0);
+                            const percentage = ((value * 100) / total).toFixed(0) + "%";
+                            
+                            // Só mostra a porcentagem se ela for maior que 5% para não poluir
+                            return (value * 100 / total) > 5 ? percentage : "";
                         }
                     }
                 }
-            }
+            },
+            plugins: [ChartDataLabels, { // Certifique-se de que o ChartDataLabels está incluído aqui
+                id: 'meuTextoCentral',
+                afterDraw: function(chart) {
+                    const { ctx, chartArea: { top, bottom, left, right } } = chart;
+                    ctx.save();
+                    const centerX = (left + right) / 2;
+                    const centerY = (top + bottom) / 2;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.font = 'bold 14px sans-serif'; 
+                    ctx.fillStyle = '#212529';
+                    ctx.fillText(textoTotal, centerX, centerY);
+                    ctx.restore();
+                }
+            }]
         });
     } else {
-        document.getElementById(canvasId).parentElement.innerHTML = 
+        canvasElement.parentElement.innerHTML = 
             '<div class="text-center mt-5 text-muted d-flex flex-column align-items-center justify-content-center h-100">' +
             '<span style="font-size: 2rem;">🍃</span>' +
             '<p class="mt-2">' + msgVazia + '</p>' +
@@ -115,4 +145,28 @@ function toggleDetails(element) {
         // Alterna a classe d-none (esconde/mostra) do Bootstrap
         details.classList.toggle('d-none');
     }
+}
+
+// Função para alternar entre as abas de transações
+function filtrarAba(tipo, botaoClicado) {
+    // 1. Esconde TODAS as listas
+    document.querySelectorAll('.lista-transacoes').forEach(el => {
+        el.classList.add('d-none');
+    });
+
+    // 2. Mostra apenas a lista selecionada (conta, credito ou receitas)
+    const listaAlvo = document.getElementById('aba-' + tipo);
+    if (listaAlvo) {
+        listaAlvo.classList.remove('d-none');
+    }
+
+    // 3. Reseta o estilo de TODOS os botões para "inativo" (outline)
+    document.querySelectorAll('.btn-filtro').forEach(btn => {
+        btn.classList.remove('btn-dark', 'active');
+        btn.classList.add('btn-outline-secondary');
+    });
+
+    // 4. Aplica o estilo "ativo" (preenchido) apenas no botão clicado
+    botaoClicado.classList.remove('btn-outline-secondary');
+    botaoClicado.classList.add('btn-dark', 'active');
 }

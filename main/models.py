@@ -4,13 +4,23 @@ from django.contrib.auth.models import User
 import uuid
     
 class Categoria(models.Model):
+    TIPO_CHOICES = (
+        ('D', 'Despesa'),
+        ('R', 'Receita'),
+    )
+    
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     nome = models.CharField(max_length=50)
+    tipo = models.CharField(max_length=1, choices=TIPO_CHOICES, default='D')
     cor = models.CharField(max_length=7, default='#6c757d') 
     criada_em = models.DateTimeField(auto_now_add=True)
+    
+    ignorar_grafico = models.BooleanField(default=False, verbose_name="Ocultar nos Gráficos")
 
     def __str__(self):
-        return f"{self.nome} ({self.usuario.username})"
+        return f"{self.nome}"
+    class Meta:
+        ordering = ['nome']
 
 class Transacao(models.Model):
     TIPO_CHOICES = (
