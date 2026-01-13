@@ -2,25 +2,18 @@
   "crons": [
     {
       "path": "/api/cron/enviar-notificacao/",
-      "schedule": "0 15 * * *"
-    },
-    {
-      "path": "/api/cron/enviar-notificacao/",
-      "schedule": "0 21 * * *"
-    },
-    {
-      "path": "/api/cron/enviar-notificacao/",
-      "schedule": "0 0 * * *"
-    }],
-    "builds": [{
-        "src": "core/wsgi.py",
-        "use": "@vercel/python",
-        "config": { "maxLambdaSize": "15mb", "runtime": "python3.9" }
-    }],
-    "routes": [
-        {
-            "src": "/(.*)",
-            "dest": "core/wsgi.py"
-        }
-    ]
+      "schedule": "0 15,21,0 * * *"
+    }
+  ],
+  "builds": [{
+      "src": "core/wsgi.py",
+      "use": "@vercel/python",
+      "config": { "maxLambdaSize": "15mb", "runtime": "python3.9" }
+  }],
+  "routes": [
+      {
+          "src": "/(.*)",
+          "dest": "core/wsgi.py"
+      }
+  ]
 }
