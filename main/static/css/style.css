@@ -150,3 +150,25 @@ button.nav-item-app {
     border: 1px solid #ddd;
     vertical-align: middle;
 }
+
+/* Reduz apenas os botões de Alertas e Sair */
+#btn-notificacao-nav {
+    width: 50px !important;  /* Mais estreito (o normal é 80px) */
+    font-size: 10px !important; /* Texto menor */
+}
+
+/* Reduz o ícone dentro deles */
+#btn-notificacao-nav .nav-icon {
+    font-size: 18px !important; /* Ícone menor (o normal é 24px) */
+    margin-bottom: 15px;
+}
+
+#btn-sair {
+    width: 50px !important;  /* Mais estreito (o normal é 80px) */
+    font-size: 10px !important; /* Texto menor */
+}
+
+/* Reduz o ícone dentro deles */
+#btn-sair .nav-icon {
+    font-size: 18px !important; /* Ícone menor (o normal é 24px) */
+}

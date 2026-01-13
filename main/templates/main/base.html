@@ -1,56 +1,67 @@
 {% load static %}
-<!DOCTYPE html>
+{% load webpush_notifications %}
 
+<!DOCTYPE html>
 <html lang="pt-br">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-
-    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
-
     <title>Minhas Finanças</title>
 
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
     <link rel="shortcut icon" type="image/png" href="{% static 'img/icon.png' %}" />
-
     <link rel="manifest" href="{% static 'manifest.json' %}" />
+    
     <meta name="theme-color" content="#f8f9fa" />
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="apple-touch-icon" href="{% static 'img/icon.png' %}" />
+
+    {% webpush_header %}
   </head>
   <body class="bg-light">
+    
     <div class="container mt-3" style="padding-bottom: 90px;">
-      {% block content %}
+      
+      <div class="d-none">
+          {% webpush_button with_class="btn btn-primary" %}
+      </div>
 
+      {% block content %}
       {% endblock %}
     </div>
 
     {% if user.is_authenticated %}
-      <nav class="navbar fixed-bottom navbar-light bg-white mobile-nav">
+      <nav class="navbar fixed-bottom navbar-light bg-white mobile-nav shadow-lg">
         <div class="container-fluid d-flex justify-content-around align-items-center h-100">
+          
           <a href="{% url 'home' %}" class="nav-item-app">
             <span class="nav-icon">🏠</span>
             <span>Início</span>
           </a>
 
+          <button id="btn-notificacao-nav" class="nav-item-app border-0 bg-transparent" onclick="ativarNotificacoes()">
+            <span class="nav-icon" id="sino-icon">🔔</span>
+          </button>
+
           <form action="{% url 'logout' %}" method="post" class="d-flex">
             {% csrf_token %}
-            <button type="submit" class="nav-item-app">
+            <button type="submit" id="btn-sair" class="nav-item-app border-0 bg-transparent">
               <span class="nav-icon">🚪</span>
               <span>Sair</span>
             </button>
           </form>
 
           <div class="fab-container">
-            <a href="{% url 'nova_transacao' %}" class="btn btn-primary btn-fab">+</a>
+            <a href="{% url 'nova_transacao' %}" class="btn btn-primary btn-fab shadow">+</a>
           </div>
 
           <a href="{% url 'gerenciar_categorias' %}" class="nav-item-app">
             <span class="nav-icon">📂</span>
             <span>Cats</span>
           </a>
+
         </div>
       </nav>
     {% endif %}
@@ -62,7 +73,7 @@
         window.addEventListener('load', function () {
           navigator.serviceWorker.register('/sw.js').then(
             function (registration) {
-              console.log('ServiceWorker registrado com sucesso: ', registration.scope)
+              console.log('ServiceWorker registrado: ', registration.scope)
             },
             function (err) {
               console.log('Falha no ServiceWorker: ', err)
@@ -70,6 +81,39 @@
           )
         })
       }
+    </script>
+
+    <script>
+        function ativarNotificacoes() {
+            const botaoOriginal = document.getElementById('webpush-subscribe-button');
+            if (botaoOriginal) {
+                const estado = botaoOriginal.innerText;
+                if (estado.includes("Subscribe") || estado.includes("Subscribe")) {
+                    botaoOriginal.click(); 
+                } else {
+                    alert("✅ As notificações já estão ativadas!");
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const botaoOriginal = document.getElementById('webpush-subscribe-button');
+            const meuBotao = document.getElementById('btn-notificacao-nav');
+            const sinoIcon = document.getElementById('sino-icon');
+            const sinoText = document.getElementById('sino-text');
+            
+            if (botaoOriginal && meuBotao) {
+                setTimeout(() => {
+                    const texto = botaoOriginal.innerText;
+                    // Se já estiver inscrito (Unsubscribe/Disable), mudamos a cor e texto
+                    if (texto && (texto.includes("Unsubscribe") || texto.includes("Disable"))) {
+                        meuBotao.classList.add('text-primary'); 
+                        sinoText.innerText = "Ativo";
+                        sinoText.classList.add('fw-bold');
+                    }
+                }, 1000);
+            }
+        });
     </script>
   </body>
 </html>

@@ -19,4 +19,5 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('sw.js', TemplateView.as_view(template_name='main/sw.js', content_type='application/javascript'), name='sw.js'),
+    path('webpush/', include('webpush.urls')),
 ]

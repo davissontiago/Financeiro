@@ -18,3 +18,29 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// Evento de Recebimento de Push
+self.addEventListener('push', function (event) {
+    const eventInfo = event.data.text();
+    const data = event.data.json();
+    const head = data.head || 'Lembrete Financeiro';
+    const body = data.body || 'Hora de registrar seus gastos!';
+    const icon = '/static/img/icon.png'; // Certifique-se que o caminho está certo
+
+    event.waitUntil(
+        self.registration.showNotification(head, {
+            body: body,
+            icon: icon,
+            badge: icon,
+            data: data.url || '/'
+        })
+    );
+});
+
+// Evento de Clique na Notificação
+self.addEventListener('notificationclick', function (event) {
+    event.notification.close();
+    event.waitUntil(
+        clients.openWindow(event.notification.data)
+    );
+});

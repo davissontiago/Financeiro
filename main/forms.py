@@ -15,7 +15,7 @@ class TransacaoForm(forms.ModelForm):
         model = Transacao
         fields = ['tipo', 'valor', 'data', 'metodo', 'categoria', 'descricao']
         widgets = {
-            'data': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'data': forms.DateInput(format='%Y-%m-%d',attrs={'type': 'date', 'class': 'form-control'}),
             'valor': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control', 'placeholder': '0.00'}),
             'tipo': forms.Select(attrs={'class': 'form-select'}),
             'metodo': forms.Select(attrs={'class': 'form-select'}),
