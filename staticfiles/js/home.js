@@ -7,19 +7,19 @@ if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
     // Plugin para Texto no Centro
     const centerTextPlugin = {
         id: 'centerText',
-        beforeDraw: function(chart) {
+        beforeDraw: function (chart) {
             if (chart.config.options.elements.center) {
                 var width = chart.width,
                     height = chart.height,
                     ctx = chart.ctx;
 
                 ctx.restore();
-                
+
                 var text = chart.config.options.elements.center.text;
-                if (!text) return; 
+                if (!text) return;
                 text = text.toString();
 
-                var fontSize = (height / 160).toFixed(2); 
+                var fontSize = (height / 160).toFixed(2);
                 if (text.length > 8) fontSize = (fontSize * 0.85).toFixed(2);
                 if (text.length > 12) fontSize = (fontSize * 0.70).toFixed(2);
 
@@ -28,7 +28,7 @@ if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
                 ctx.fillStyle = "#333";
 
                 var textX = Math.round((width - ctx.measureText(text).width) / 2);
-                var textY = (height / 2) - (height * 0.05); 
+                var textY = (height / 2) - (height * 0.05);
 
                 ctx.fillText(text, textX, textY);
                 ctx.save();
@@ -38,24 +38,25 @@ if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
     Chart.register(centerTextPlugin);
 }
 
-Chart.getChart = Chart.getChart; // Garante que a lib está carregada
+// main/static/js/home.js
+
+// main/static/js/home.js
+
+// 1. Limpeza preventiva
+Chart.getChart = Chart.getChart;
 if (Chart.registry && Chart.registry.plugins) {
-    // Remove registros antigos de plugins de centro que podem ter ficado na memória do navegador
-    const pluginsGerais = ['centerText', 'center', 'centerTextCustom'];
+    const pluginsGerais = ['centerText', 'center', 'centerTextCustom', 'meuTextoCentral', 'pluginCentroHomeDefinitivo', 'pluginCentroUnico_'];
     pluginsGerais.forEach(id => {
         try { Chart.unregister(Chart.registry.getPlugin(id)); } catch(e) {}
     });
 }
 
-// Função Genérica para Criar Gráficos
 function criarGraficoFinanceiro(canvasId, labels, data, cores, totalValor, msgVazia) {
     const canvasElement = document.getElementById(canvasId);
     if (!canvasElement) return;
     
-    const chartExistente = Chart.getChart(canvasId);
-    if (chartExistente) {
-        chartExistente.destroy();
-    }
+    const instance = Chart.getChart(canvasId);
+    if (instance) instance.destroy();
 
     const ctx = canvasElement.getContext('2d');
     
@@ -75,17 +76,21 @@ function criarGraficoFinanceiro(canvasId, labels, data, cores, totalValor, msgVa
                     data: data,
                     backgroundColor: cores,
                     borderWidth: 1,
+                    borderColor: '#fff', // Borda branca entre as fatias para separar
                     hoverOffset: 4
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '75%', 
+                cutout: '70%', 
+                layout: {
+                    padding: 0 
+                },
                 plugins: {
                     legend: { 
                         position: 'bottom', 
-                        labels: { boxWidth: 12, padding: 15 } 
+                        labels: { boxWidth: 12, padding: 15, font: { size: 11 } } 
                     },
                     tooltip: {
                         callbacks: {
@@ -97,23 +102,36 @@ function criarGraficoFinanceiro(canvasId, labels, data, cores, totalValor, msgVa
                             }
                         }
                     },
-                    // AJUSTE AQUI: Formatação das porcentagens dentro das fatias
+                    // === AQUI ESTÁ A MÁGICA DO DESTAQUE ===
                     datalabels: {
-                        color: '#fff',
-                        font: { weight: 'bold', size: 11 },
+                        color: '#ffffff',                // Texto Branco Puro
+                        textStrokeColor: 'rgba(0,0,0,0.6)', // Contorno Preto (60% opacidade)
+                        textStrokeWidth: 3,              // Grossura do contorno (bem visível)
+                        textShadowColor: 'rgba(0,0,0,0.3)', // Sombra extra para profundidade
+                        textShadowBlur: 3,
+
+                        font: { weight: '400', size: 10 }, // Peso 900 é "Extra Bold"
+                        textAlign: 'center',
+                        anchor: 'center',
+                        align: 'center',
+                        offset: 0,
+                        
                         formatter: (value, context) => {
                             const dataset = context.chart.data.datasets[0];
                             const total = dataset.data.reduce((acc, curr) => acc + curr, 0);
-                            const percentage = ((value * 100) / total).toFixed(0) + "%";
+                            const percent = (value * 100) / total;
                             
-                            // Só mostra a porcentagem se ela for maior que 5% para não poluir
-                            return (value * 100 / total) > 5 ? percentage : "";
+                            // Mantemos a regra de esconder fatias muito pequenas (menor que 4%)
+                            // para não sobrepor, já que agora o texto está mais "gordo" com a borda.
+                            if (percent < 4) return ""; 
+
+                            return percent.toFixed(0) + "%";
                         }
                     }
                 }
             },
-            plugins: [ChartDataLabels, { // Certifique-se de que o ChartDataLabels está incluído aqui
-                id: 'meuTextoCentral',
+            plugins: [ChartDataLabels, { 
+                id: 'pluginCentroUnico_' + canvasId,
                 afterDraw: function(chart) {
                     const { ctx, chartArea: { top, bottom, left, right } } = chart;
                     ctx.save();
@@ -140,7 +158,7 @@ function criarGraficoFinanceiro(canvasId, labels, data, cores, totalValor, msgVa
 function toggleDetails(element) {
     // Procura a div de detalhes DENTRO do elemento clicado
     const details = element.querySelector('.transaction-details');
-    
+
     if (details) {
         // Alterna a classe d-none (esconde/mostra) do Bootstrap
         details.classList.toggle('d-none');

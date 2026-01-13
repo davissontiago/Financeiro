@@ -97,6 +97,10 @@ def home(request):
     # Gera dados apenas para as despesas
     labels_v, data_v, cores_v = preparar_dados_grafico(transacoes_avista)
     labels_c, data_c, cores_c = preparar_dados_grafico(transacoes_credito)
+    labels_r, data_r, cores_r = preparar_dados_grafico(transacoes_receitas)
+    transacoes_total_despesas = transacoes.filter(tipo='D')
+    labels_t, data_t, cores_t = preparar_dados_grafico(transacoes_total_despesas)
+    soma_total_gastos = transacoes_total_despesas.aggregate(Sum('valor'))['valor__sum'] or 0
 
     # =======================================================
     # 6. CONTEXTO E RENDERIZAÇÃO
@@ -116,6 +120,10 @@ def home(request):
         'soma_credito': soma_credito,
 
         # Dados dos Gráficos
+        'soma_total_gastos': soma_total_gastos,
+
+        'labels_receitas': labels_r, 'data_receitas': data_r, 'cores_receitas': cores_r,
+        'labels_total': labels_t, 'data_total': data_t, 'cores_total': cores_t,
         'labels_avista': labels_v, 'data_avista': data_v, 'cores_avista': cores_v,
         'labels_credito': labels_c, 'data_credito': data_c, 'cores_credito': cores_c,
         
