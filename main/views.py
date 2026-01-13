@@ -319,7 +319,7 @@ def cron_lembretes(request):
     hora = agora.hour
     
     # 1. Define a mensagem baseada no horário
-    titulo = "Lembrete Financeiro"
+    titulo = "Lembrete de Finanças"
     mensagem = "Não esqueça de registrar seus gastos!"
     icon = "/static/img/icon.png"
 
