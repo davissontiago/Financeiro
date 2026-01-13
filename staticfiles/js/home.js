@@ -123,7 +123,7 @@ function criarGraficoFinanceiro(canvasId, labels, data, cores, totalValor, msgVa
                             
                             // Mantemos a regra de esconder fatias muito pequenas (menor que 4%)
                             // para não sobrepor, já que agora o texto está mais "gordo" com a borda.
-                            if (percent < 3) return ""; 
+                            if (percent <= 3) return ""; 
 
                             return percent.toFixed(0) + "%";
                         }
