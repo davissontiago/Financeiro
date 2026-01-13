@@ -3,8 +3,11 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.db.models import Sum
 from django.utils import timezone
+from django.http import JsonResponse
+from webpush import send_user_notification
 from .models import Transacao, Categoria
 from .forms import TransacaoForm, CategoriaForm
 
@@ -309,3 +312,46 @@ def editar_transacao(request, id):
         form = TransacaoForm(request.user, initial=dados_iniciais)
     
     return render(request, 'main/form_transacao.html', {'form': form, 'acao': 'Editar'})
+
+def cron_lembretes(request):
+    # Pega a hora atual (ajustada para o fuso horário configurado no settings)
+    agora = timezone.localtime(timezone.now())
+    hora = agora.hour
+    
+    # 1. Define a mensagem baseada no horário
+    titulo = "Lembrete Financeiro"
+    mensagem = "Não esqueça de registrar seus gastos!"
+    icon = "/static/img/icon.png"
+
+    if 11 <= hora < 14: # Faixa das 12h (Almoço)
+        titulo = "🍽️ Hora do Almoço"
+        mensagem = "Comprou quentinha ou lanche? Registre agora e mantenha o controle!"
+        
+    elif 17 <= hora < 19: # Faixa das 18h (Saída)
+        titulo = "🌆 Fim de Expediente"
+        mensagem = "Passou no mercado na volta para casa? Anote para não esquecer."
+        
+    elif 20 <= hora < 23: # Faixa das 21h (Fechamento)
+        titulo = "🌙 Fechamento do Dia"
+        mensagem = "Tire um minuto para revisar se anotou tudo hoje. O saldo bateu?"
+
+    # 2. Envia para todos os usuários
+    users = User.objects.all()
+    enviados = 0
+    
+    payload = {
+        "head": titulo,
+        "body": mensagem,
+        "icon": icon,
+        "url": "/" # Ao clicar, abre a Home
+    }
+
+    for user in users:
+        try:
+            # O send_user_notification já verifica se o usuário tem inscrição
+            send_user_notification(user=user, payload=payload, ttl=1000)
+            enviados += 1
+        except Exception as e:
+            pass # Se falhar um, continua para o próximo
+            
+    return JsonResponse({'status': 'sucesso', 'mensagem': titulo, 'enviados': enviados})

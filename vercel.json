@@ -1,4 +1,17 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron/enviar-notificacao/",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/enviar-notificacao/",
+      "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/cron/enviar-notificacao/",
+      "schedule": "0 0 * * *"
+    }],
     "builds": [{
         "src": "core/wsgi.py",
         "use": "@vercel/python",
